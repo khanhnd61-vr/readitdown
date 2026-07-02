@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ReadItDown - Minimal Markdown Viewer</title>
-  <meta name="description" content="ReadItDown is a minimal, fast markdown viewer for Linux and macOS. Split views, edit with live preview, VS Code dark look. Built with Tauri and Svelte." />
+  <meta name="description" content="ReadItDown is a minimal, fast markdown viewer for Linux, macOS, and Windows. Split views, edit with live preview, VS Code dark look. Try the viewer online, or download the desktop app." />
   <meta property="og:title" content="ReadItDown - Minimal Markdown Viewer" />
-  <meta property="og:description" content="A minimal, fast markdown viewer for Linux and macOS." />
+  <meta property="og:description" content="A minimal, fast markdown viewer for Linux, macOS, and Windows. Try it online." />
   <meta property="og:image" content="screenshot.png" />
   <style>
     :root {
@@ -73,6 +73,7 @@
 
     section { padding: 48px 0 8px; }
     section h2 { color: var(--fg-bright); font-size: 26px; margin-bottom: 20px; }
+    section p.lead { color: var(--fg-muted); margin-bottom: 20px; max-width: 640px; }
 
     .grid {
       display: grid;
@@ -99,6 +100,86 @@
     pre.block .c { color: #6a9955; }
     pre.block .p { color: #569cd6; }
 
+    /* Download buttons */
+    .downloads { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    .dl {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      min-width: 172px;
+      padding: 16px 20px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--fg);
+      flex: 1;
+    }
+    .dl:hover { border-color: var(--accent); text-decoration: none; }
+    .dl .glyph { font-size: 22px; line-height: 1; }
+    .dl .glyph svg { display: block; }
+    .dl .os { font-weight: 700; color: var(--fg-bright); font-size: 15px; }
+    .dl .file { font-size: 12px; color: var(--fg-muted); }
+    .dl-note { color: var(--fg-muted); font-size: 13px; margin-top: 14px; }
+
+    /* Online viewer */
+    .viewer {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--bg2);
+    }
+    .viewer.drag { border-color: var(--accent); box-shadow: inset 0 0 0 2px rgba(0, 120, 212, 0.4); }
+    .viewer .pane { display: flex; flex-direction: column; min-width: 0; }
+    .viewer .pane + .pane { border-left: 1px solid var(--border); }
+    .viewer .head {
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--fg-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg3);
+    }
+    #md-src {
+      flex: 1;
+      min-height: 360px;
+      resize: vertical;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--fg);
+      padding: 14px;
+      font-family: Menlo, Monaco, "Droid Sans Mono", monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      width: 100%;
+    }
+    .md-preview { padding: 14px 18px; overflow: auto; min-height: 360px; }
+    .md-preview :first-child { margin-top: 0; }
+    .md-preview h1, .md-preview h2 {
+      color: var(--fg-bright);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.3em;
+      margin: 0.9em 0 0.5em;
+    }
+    .md-preview h3, .md-preview h4, .md-preview h5, .md-preview h6 { color: var(--fg-bright); margin: 0.9em 0 0.4em; }
+    .md-preview p, .md-preview li { color: var(--fg); }
+    .md-preview code { background: var(--bg3); padding: 0.15em 0.35em; border-radius: 4px; }
+    .md-preview pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; overflow-x: auto; }
+    .md-preview pre code { background: none; padding: 0; }
+    .md-preview blockquote { border-left: 3px solid var(--border); margin: 0.6em 0; padding: 0.2em 1em; color: var(--fg-muted); }
+    .md-preview table { border-collapse: collapse; margin: 0.6em 0; display: block; overflow-x: auto; }
+    .md-preview th, .md-preview td { border: 1px solid var(--border); padding: 6px 12px; }
+    .md-preview img { max-width: 100%; }
+    .md-preview hr { border: 0; border-top: 1px solid var(--border); margin: 1em 0; }
+    .md-preview ul, .md-preview ol { padding-left: 1.4em; }
+
+    @media (max-width: 720px) {
+      .viewer { grid-template-columns: 1fr; }
+      .viewer .pane + .pane { border-left: 0; border-top: 1px solid var(--border); }
+    }
+
     footer {
       margin-top: 64px;
       border-top: 1px solid var(--border);
@@ -118,63 +199,71 @@
 
     <div class="hero">
       <h1>Read<span>It</span>Down</h1>
-      <p class="tag">A minimal, fast markdown viewer for Linux and macOS.
+      <p class="tag">A minimal, fast markdown viewer for Linux, macOS, and Windows.
         Split views, edit with live preview, VS Code dark look.</p>
-      <div class="btns">
-        <a class="btn primary" href="#install">Install</a>
-        <a class="btn ghost" href="https://github.com/khanhnd61-vr/readitdown">View source</a>
+      <div class="downloads">
+        <a class="dl" href="https://github.com/khanhnd61-vr/readitdown/releases/download/v0.1.0/ReadItDown_0.1.0_aarch64.dmg" id="dl-macos">
+          <span class="glyph">&#63743;</span>
+          <span class="os">macOS</span>
+          <span class="file">.dmg (Apple Silicon)</span>
+        </a>
+        <a class="dl" href="https://github.com/khanhnd61-vr/readitdown/releases/download/v0.1.0/ReadItDown_0.1.0_x64-setup.exe" id="dl-windows">
+          <span class="glyph">&#9109;</span>
+          <span class="os">Windows</span>
+          <span class="file">.exe installer (x64)</span>
+        </a>
+        <a class="dl" href="https://github.com/khanhnd61-vr/readitdown/releases/download/v0.1.0/ReadItDown_0.1.0_amd64.deb" id="dl-linux">
+          <span class="glyph">&#128039;</span>
+          <span class="os">Linux</span>
+          <span class="file">.deb (x64)</span>
+        </a>
+        <a class="dl" href="https://github.com/khanhnd61-vr/readitdown" id="gh-btn">
+          <span class="glyph"><svg viewBox="0 0 16 16" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></span>
+          <span class="os">GitHub</span>
+          <span class="file">Build from source</span>
+        </a>
       </div>
+      <p class="dl-note">Builds are unsigned. See the
+        <a href="https://github.com/khanhnd61-vr/readitdown#install">README</a> for first-launch
+        notes, other package formats, and how to build from source.</p>
     </div>
 
-    <div class="shot">
-      <img src="screenshot.png" alt="ReadItDown showing a folder tree and two split panes rendering markdown" />
-      <div class="cap">Split panes, folder tree, GitHub-flavored rendering on a VS Code dark theme.</div>
-    </div>
+    <section id="try">
+      <h2>Try it online</h2>
+      <p class="lead">Paste markdown below, or drag a <code>.md</code> file anywhere onto the box.
+        It renders live, right here in your browser - nothing is uploaded.</p>
+      <div class="viewer" id="viewer">
+        <div class="pane">
+          <div class="head">Markdown</div>
+          <textarea id="md-src" spellcheck="false" aria-label="Markdown input"># Hello, ReadItDown
 
-    <section>
-      <h2>Features</h2>
-      <div class="grid">
-        <div class="card">
-          <h3>Multiview</h3>
-          <p>Open files in tabs, split the window into panes, drag dividers to resize. One tab strip per pane.</p>
+Drag a **.md** file onto this box, or just start typing.
+
+## What renders
+- **Bold**, _italic_, `inline code`, ~~strikethrough~~
+- [Links](https://github.com/khanhnd61-vr/readitdown) open in a new tab
+- Task lists, tables, quotes, and code blocks
+
+> Everything is rendered locally in your browser. Nothing is uploaded.
+
+```js
+function greet(name) {
+  return `Hello, ${name}!`;
+}
+```
+
+| Platform | Package |
+| -------- | ------- |
+| macOS    | .dmg    |
+| Windows  | .exe    |
+| Linux    | .deb    |
+</textarea>
         </div>
-        <div class="card">
-          <h3>Edit while viewing</h3>
-          <p>CodeMirror editor side by side with the rendered preview. It updates as you type; Ctrl+S saves.</p>
-        </div>
-        <div class="card">
-          <h3>Folder explorer</h3>
-          <p>Browse any folder, create and delete files and folders, all from a sidebar you can resize or hide (Ctrl+B).</p>
-        </div>
-        <div class="card">
-          <h3>Links and images</h3>
-          <p>Web links open your browser. Relative .md links open in a tab. Images and embedded HTML just render.</p>
-        </div>
-        <div class="card">
-          <h3>Two view modes</h3>
-          <p>Wrap long lines in paragraphs, tables, and code - or cut off with a horizontal scrollbar. Toggle per pane.</p>
-        </div>
-        <div class="card">
-          <h3>Small and fast</h3>
-          <p>Built with Tauri 2 and Svelte 5. One ~14 MB binary that starts instantly and detaches from your terminal.</p>
+        <div class="pane">
+          <div class="head">Preview</div>
+          <div class="md-preview" id="md-out"></div>
         </div>
       </div>
-    </section>
-
-    <section id="install">
-      <h2>Install</h2>
-      <p>Build from source (needs <a href="https://rustup.rs">Rust</a> and Node.js):</p>
-      <pre class="block"><span class="c"># clone and build</span>
-git clone https://github.com/khanhnd61-vr/readitdown
-cd readitdown
-npm install
-npm run tauri build
-
-<span class="c"># Ubuntu/Debian: install the package it produced</span>
-sudo apt install ./src-tauri/target/release/bundle/deb/ReadItDown_0.1.0_amd64.deb</pre>
-      <p>Linux needs the WebKitGTK dev packages to build; macOS just needs Xcode command line
-        tools. See the <a href="https://github.com/khanhnd61-vr/readitdown#prerequisites">README</a> for the exact list,
-        plus rpm/AppImage and macOS artifacts.</p>
     </section>
 
     <section>
@@ -189,5 +278,60 @@ sudo apt install ./src-tauri/target/release/bundle/deb/ReadItDown_0.1.0_amd64.de
       ReadItDown - built with Tauri 2 + Svelte 5 + CodeMirror 6
     </footer>
   </div>
+
+  <script src="markdown-it.min.js"></script>
+  <script>
+    (function () {
+      var src = document.getElementById("md-src");
+      var out = document.getElementById("md-out");
+      var viewer = document.getElementById("viewer");
+
+      var md = window.markdownit
+        ? window.markdownit({ html: true, linkify: true, typographer: true })
+        : null;
+
+      function render() {
+        if (!md) {
+          out.innerHTML = "<p>Could not load the markdown renderer. Check your connection and reload.</p>";
+          return;
+        }
+        out.innerHTML = md.render(src.value || "");
+        // Open links from the preview in a new tab.
+        out.querySelectorAll("a").forEach(function (a) {
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+        });
+      }
+
+      src.addEventListener("input", render);
+
+      // Drag a .md (or any text) file anywhere onto the viewer to load it.
+      ["dragenter", "dragover"].forEach(function (ev) {
+        viewer.addEventListener(ev, function (e) {
+          e.preventDefault();
+          viewer.classList.add("drag");
+        });
+      });
+      ["dragleave", "dragend", "drop"].forEach(function (ev) {
+        viewer.addEventListener(ev, function (e) {
+          if (ev === "dragleave" && viewer.contains(e.relatedTarget)) return;
+          viewer.classList.remove("drag");
+        });
+      });
+      viewer.addEventListener("drop", function (e) {
+        e.preventDefault();
+        var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          src.value = reader.result;
+          render();
+        };
+        reader.readAsText(file);
+      });
+
+      render();
+    })();
+  </script>
 </body>
 </html>

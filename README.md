@@ -1,6 +1,6 @@
-# ReadItDown
+# ReadItDown - Minimal markdown viewer
 
-Minimal markdown viewer. Tauri 2 + Svelte 5 + CodeMirror 6.
+Use online or download offline [here](https://havi.fit/readitdown/)
 
 ## Features
 
@@ -54,7 +54,7 @@ so the MSVC toolchain is on `PATH`.
 
 ## Run
 
-Same on Linux and macOS:
+Same on all platforms:
 
 ```sh
 npm install
@@ -65,7 +65,7 @@ Open the `sample/` folder to try every feature.
 
 ## Build
 
-Same command on both platforms, artifacts differ:
+Same command on all platforms, artifacts differ:
 
 ```sh
 npm run tauri build
@@ -144,3 +144,10 @@ standalone `src-tauri\target\release\readitdown.exe` without installing.
 
 The installer is unsigned, so SmartScreen may warn on first run: click **More info ->
 Run anyway**.
+
+
+## Release
+
+Linux: `src-tauri/target/release/bundle/deb/*.deb`
+macOS: `src-tauri/target/release/bundle/dmg/*.dmg`
+Windows: `src-tauri/target/release/bundle/nsis/*.exe`
