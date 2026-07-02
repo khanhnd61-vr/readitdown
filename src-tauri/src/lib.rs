@@ -1,9 +1,20 @@
 use serde::Serialize;
 use std::fs;
-use std::path::Path;
+use std::path::{Component, Path};
 use std::sync::OnceLock;
 
 static INITIAL_ROOT: OnceLock<Option<String>> = OnceLock::new();
+
+/// Convert a filesystem path to the forward-slash form the UI uses everywhere.
+/// On Windows this strips the `\\?\` verbatim prefix that `canonicalize` adds and
+/// turns backslashes into forward slashes; on Unix it's a plain lossy conversion.
+/// The frontend assumes `/` separators, and `std::fs` accepts `/` on Windows, so
+/// keeping everything forward-slashed on both sides just works.
+fn to_ui_path(p: &Path) -> String {
+    let s = p.to_string_lossy();
+    let s = s.strip_prefix(r"\\?\").unwrap_or(s.as_ref());
+    s.replace('\\', "/")
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,7 +37,7 @@ fn list_dir(path: String) -> Result<Vec<Entry>, String> {
             let is_dir = e.file_type().ok()?.is_dir();
             Some(Entry {
                 name,
-                path: e.path().to_string_lossy().to_string(),
+                path: to_ui_path(&e.path()),
                 is_dir,
             })
         })
@@ -51,7 +62,10 @@ fn write_text_file(path: String, content: String) -> Result<(), String> {
 
 fn resolve_new_path(dir: &str, rel_path: &str) -> Result<std::path::PathBuf, String> {
     let rel = Path::new(rel_path);
-    if rel_path.is_empty() || rel.is_absolute() || rel_path.split('/').any(|p| p == "..") {
+    if rel_path.is_empty()
+        || rel.is_absolute()
+        || rel.components().any(|c| matches!(c, Component::ParentDir))
+    {
         return Err("invalid path".into());
     }
     let path = Path::new(dir).join(rel);
@@ -68,14 +82,14 @@ fn create_file(dir: String, rel_path: String) -> Result<String, String> {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     fs::write(&path, "").map_err(|e| e.to_string())?;
-    Ok(path.to_string_lossy().to_string())
+    Ok(to_ui_path(&path))
 }
 
 #[tauri::command]
 fn create_dir(dir: String, rel_path: String) -> Result<String, String> {
     let path = resolve_new_path(&dir, &rel_path)?;
     fs::create_dir_all(&path).map_err(|e| e.to_string())?;
-    Ok(path.to_string_lossy().to_string())
+    Ok(to_ui_path(&path))
 }
 
 #[tauri::command]
@@ -98,7 +112,7 @@ fn initial_root() -> Option<String> {
 pub fn run() {
     let root = std::env::args().nth(1).and_then(|arg| {
         let p = fs::canonicalize(arg).ok()?;
-        p.is_dir().then(|| p.to_string_lossy().to_string())
+        p.is_dir().then(|| to_ui_path(&p))
     });
     let _ = INITIAL_ROOT.set(root);
 

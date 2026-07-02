@@ -15,7 +15,7 @@ Minimal markdown viewer. Tauri 2 + Svelte 5 + CodeMirror 6.
 
 ## Prerequisites
 
-Both platforms need Rust and Node.js:
+Every platform needs Rust and Node.js. On Linux and macOS install Rust with:
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -38,6 +38,20 @@ xcode-select --install
 
 No other system packages; the webview (WKWebView) ships with macOS.
 
+### Windows (x86-64)
+
+1. **Rust** - install [rustup](https://rustup.rs) (`rustup-init.exe`); take the default
+   MSVC toolchain.
+2. **Microsoft C++ Build Tools** - the MSVC linker Rust needs. Install "Visual Studio
+   Build Tools" (or Visual Studio) with the **Desktop development with C++** workload.
+3. **WebView2 runtime** - the webview Tauri renders into. Preinstalled on current
+   Windows 11 and up-to-date Windows 10; otherwise grab the Evergreen bootstrapper from
+   [Microsoft](https://developer.microsoft.com/microsoft-edge/webview2/).
+4. **Node.js** - any recent LTS from [nodejs.org](https://nodejs.org).
+
+Run the build commands below from **PowerShell** or **Command Prompt** (not Git Bash),
+so the MSVC toolchain is on `PATH`.
+
 ## Run
 
 Same on Linux and macOS:
@@ -59,11 +73,13 @@ npm run tauri build
 
 Artifacts land in `src-tauri/target/release/`:
 
-- `readitdown` - the plain binary
+- `readitdown` (`readitdown.exe` on Windows) - the plain binary
 - `bundle/` - installable packages
   - Linux: deb, rpm, AppImage
   - macOS: `macos/ReadItDown.app`, `dmg/ReadItDown_*.dmg` (for the host arch; on Apple
     Silicon add `-- --target universal-apple-darwin` to build a universal binary)
+  - Windows: `nsis/ReadItDown_0.1.0_x64-setup.exe` (NSIS installer) and
+    `msi/ReadItDown_0.1.0_x64_en-US.msi` (MSI installer)
  
 ## CLI usage
 
@@ -73,8 +89,10 @@ readitdown .      # open the current folder
 readitdown ~/docs # open a specific folder
 ```
 
-`readitdown` detaches from the terminal (release builds), so the prompt returns
-immediately. Set `READITDOWN_FOREGROUND=1` to keep it attached.
+On Linux and macOS `readitdown` detaches from the terminal (release builds), so the
+prompt returns immediately; set `READITDOWN_FOREGROUND=1` to keep it attached. On
+Windows the GUI binary already returns the prompt right away (use `readitdown.exe`, or
+`readitdown.exe .` to open the current folder).
 
 ## Install
 
@@ -113,3 +131,16 @@ then either:
 
 The app is unsigned, so the first launch needs right-click -> Open (or allow it under
 System Settings -> Privacy & Security).
+
+### Windows
+
+Run either installer from `src-tauri\target\release\bundle\`:
+
+- `nsis\ReadItDown_0.1.0_x64-setup.exe` - the NSIS setup wizard (recommended), or
+- `msi\ReadItDown_0.1.0_x64_en-US.msi` - the MSI package
+
+Both add a Start Menu entry and put `readitdown.exe` on `PATH`. You can also just run the
+standalone `src-tauri\target\release\readitdown.exe` without installing.
+
+The installer is unsigned, so SmartScreen may warn on first run: click **More info ->
+Run anyway**.

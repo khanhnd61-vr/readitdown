@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { open } from "@tauri-apps/plugin-dialog";
   import { initialRoot } from "./lib/api";
+  import { toUiPath } from "./lib/paths";
   import { app } from "./lib/state.svelte";
   import PaneView from "./components/PaneView.svelte";
   import Sidebar from "./components/Sidebar.svelte";
@@ -15,7 +16,7 @@
 
   async function openFolder() {
     const dir = await open({ directory: true });
-    if (typeof dir === "string") app.root = dir;
+    if (typeof dir === "string") app.root = toUiPath(dir);
   }
 
   function drag(e: PointerEvent, move: (ev: PointerEvent) => void) {
