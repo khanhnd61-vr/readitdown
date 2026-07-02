@@ -64,7 +64,7 @@ Artifacts land in `src-tauri/target/release/`:
   - Linux: deb, rpm, AppImage
   - macOS: `macos/ReadItDown.app`, `dmg/ReadItDown_*.dmg` (for the host arch; on Apple
     Silicon add `-- --target universal-apple-darwin` to build a universal binary)
-
+ 
 ## CLI usage
 
 ```sh
@@ -98,11 +98,18 @@ rpm-based distros: use `bundle/rpm/ReadItDown-0.1.0-1.x86_64.rpm`.
 
 ### macOS
 
-Build on a Mac, then either:
+Build on a Mac (see the DMG note under [Build](#macos-dmg-step-needs-automation-permission)),
+then either:
 
-- open `src-tauri/target/release/bundle/dmg/ReadItDown_0.1.0_*.dmg` and drag ReadItDown
-  to Applications, or
-- copy `src-tauri/target/release/bundle/macos/ReadItDown.app` to `/Applications` yourself
+- copy `src-tauri/target/release/bundle/macos/ReadItDown.app` to `/Applications` yourself:
+
+  ```sh
+  cp -R src-tauri/target/release/bundle/macos/ReadItDown.app /Applications/
+  ```
+
+- or, if you produced a `.dmg`, open
+  `src-tauri/target/release/bundle/dmg/ReadItDown_0.1.0_*.dmg` and drag ReadItDown to
+  Applications
 
 The app is unsigned, so the first launch needs right-click -> Open (or allow it under
 System Settings -> Privacy & Security).
