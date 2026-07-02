@@ -2,6 +2,8 @@
 
 Use online or download offline [here](https://havi.fit/readitdown/)
 
+![image](docs/screenshot.png)
+
 ## Features
 
 - Folder tree sidebar, open any directory
