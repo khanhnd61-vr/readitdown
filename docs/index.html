@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReadItDown - Minimal Markdown Viewer</title>
+  <meta name="description" content="ReadItDown is a minimal, fast markdown viewer for Linux and macOS. Split views, edit with live preview, VS Code dark look. Built with Tauri and Svelte." />
+  <meta property="og:title" content="ReadItDown - Minimal Markdown Viewer" />
+  <meta property="og:description" content="A minimal, fast markdown viewer for Linux and macOS." />
+  <meta property="og:image" content="screenshot.png" />
+  <style>
+    :root {
+      --bg: #1e1e1e;
+      --bg2: #252526;
+      --bg3: #2d2d30;
+      --border: #3c3c3c;
+      --fg: #cccccc;
+      --fg-bright: #ffffff;
+      --fg-muted: #969696;
+      --accent: #0078d4;
+      --accent-hover: #026ec1;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Ubuntu, "Droid Sans", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+    }
+    code, pre {
+      font-family: Menlo, Monaco, "Droid Sans Mono", "Courier New", monospace;
+      font-size: 0.9em;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+    }
+    nav .brand { font-weight: 700; color: var(--fg-bright); font-size: 18px; }
+    nav a.gh { color: var(--fg-muted); }
+    nav a.gh:hover { color: var(--fg-bright); text-decoration: none; }
+
+    .hero { text-align: center; padding: 56px 0 32px; }
+    .hero h1 { font-size: 44px; color: var(--fg-bright); letter-spacing: -1px; }
+    .hero h1 span { color: var(--accent); }
+    .hero p.tag { font-size: 19px; color: var(--fg-muted); margin: 12px auto 28px; max-width: 560px; }
+    .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-block;
+      padding: 10px 22px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+    .btn.primary { background: var(--accent); color: #fff; }
+    .btn.primary:hover { background: var(--accent-hover); text-decoration: none; }
+    .btn.ghost { border: 1px solid var(--border); color: var(--fg); }
+    .btn.ghost:hover { border-color: var(--fg-muted); text-decoration: none; }
+
+    .shot { padding: 32px 0 8px; }
+    .shot img {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: block;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    }
+    .shot .cap { text-align: center; color: var(--fg-muted); font-size: 13px; margin-top: 10px; }
+
+    section { padding: 48px 0 8px; }
+    section h2 { color: var(--fg-bright); font-size: 26px; margin-bottom: 20px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 20px;
+    }
+    .card h3 { color: var(--fg-bright); font-size: 15px; margin-bottom: 6px; }
+    .card p { color: var(--fg-muted); font-size: 14px; }
+
+    pre.block {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 18px;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+    pre.block .c { color: #6a9955; }
+    pre.block .p { color: #569cd6; }
+
+    footer {
+      margin-top: 64px;
+      border-top: 1px solid var(--border);
+      padding: 24px 0 40px;
+      color: var(--fg-muted);
+      font-size: 13px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <span class="brand">ReadItDown</span>
+      <a class="gh" href="https://github.com/khanhnd61-vr/readitdown">GitHub &#8599;</a>
+    </nav>
+
+    <div class="hero">
+      <h1>Read<span>It</span>Down</h1>
+      <p class="tag">A minimal, fast markdown viewer for Linux and macOS.
+        Split views, edit with live preview, VS Code dark look.</p>
+      <div class="btns">
+        <a class="btn primary" href="#install">Install</a>
+        <a class="btn ghost" href="https://github.com/khanhnd61-vr/readitdown">View source</a>
+      </div>
+    </div>
+
+    <div class="shot">
+      <img src="screenshot.png" alt="ReadItDown showing a folder tree and two split panes rendering markdown" />
+      <div class="cap">Split panes, folder tree, GitHub-flavored rendering on a VS Code dark theme.</div>
+    </div>
+
+    <section>
+      <h2>Features</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Multiview</h3>
+          <p>Open files in tabs, split the window into panes, drag dividers to resize. One tab strip per pane.</p>
+        </div>
+        <div class="card">
+          <h3>Edit while viewing</h3>
+          <p>CodeMirror editor side by side with the rendered preview. It updates as you type; Ctrl+S saves.</p>
+        </div>
+        <div class="card">
+          <h3>Folder explorer</h3>
+          <p>Browse any folder, create and delete files and folders, all from a sidebar you can resize or hide (Ctrl+B).</p>
+        </div>
+        <div class="card">
+          <h3>Links and images</h3>
+          <p>Web links open your browser. Relative .md links open in a tab. Images and embedded HTML just render.</p>
+        </div>
+        <div class="card">
+          <h3>Two view modes</h3>
+          <p>Wrap long lines in paragraphs, tables, and code - or cut off with a horizontal scrollbar. Toggle per pane.</p>
+        </div>
+        <div class="card">
+          <h3>Small and fast</h3>
+          <p>Built with Tauri 2 and Svelte 5. One ~14 MB binary that starts instantly and detaches from your terminal.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="install">
+      <h2>Install</h2>
+      <p>Build from source (needs <a href="https://rustup.rs">Rust</a> and Node.js):</p>
+      <pre class="block"><span class="c"># clone and build</span>
+git clone https://github.com/khanhnd61-vr/readitdown
+cd readitdown
+npm install
+npm run tauri build
+
+<span class="c"># Ubuntu/Debian: install the package it produced</span>
+sudo apt install ./src-tauri/target/release/bundle/deb/ReadItDown_0.1.0_amd64.deb</pre>
+      <p>Linux needs the WebKitGTK dev packages to build; macOS just needs Xcode command line
+        tools. See the <a href="https://github.com/khanhnd61-vr/readitdown#prerequisites">README</a> for the exact list,
+        plus rpm/AppImage and macOS artifacts.</p>
+    </section>
+
+    <section>
+      <h2>CLI</h2>
+      <pre class="block"><span class="p">readitdown</span>          <span class="c"># open the app</span>
+<span class="p">readitdown</span> .        <span class="c"># open the current folder</span>
+<span class="p">readitdown</span> ~/notes  <span class="c"># open a specific folder</span></pre>
+      <p>The command returns your prompt immediately - the app runs detached.</p>
+    </section>
+
+    <footer>
+      ReadItDown - built with Tauri 2 + Svelte 5 + CodeMirror 6
+    </footer>
+  </div>
+</body>
+</html>
