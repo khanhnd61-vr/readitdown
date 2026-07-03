@@ -28,6 +28,21 @@
     if (isDirty(t) && !(await confirm(`Close "${t.title}" without saving?`))) return;
     closeTab(pane, t.id);
   }
+
+  function startEditDrag(e: PointerEvent, tab: Tab) {
+    e.preventDefault();
+    const rect = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();
+    function move(ev: PointerEvent) {
+      const f = (ev.clientX - rect.left) / rect.width;
+      tab.editSplit = Math.min(0.85, Math.max(0.15, f));
+    }
+    function up() {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    }
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -101,8 +116,14 @@
         </div>
       {:else if activeTab.editing}
         <div class="edit-split">
-          <Editor tab={activeTab} wrap={pane.wrap} onsave={() => activeTab && saveTab(activeTab)} />
-          <Viewer tab={activeTab} paneId={pane.id} wrap={pane.wrap} />
+          <div class="edit-cell" style="flex-grow: {activeTab.editSplit ?? 0.5}">
+            <Editor tab={activeTab} wrap={pane.wrap} onsave={() => activeTab && saveTab(activeTab)} />
+          </div>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="divider" onpointerdown={(e) => activeTab && startEditDrag(e, activeTab)}></div>
+          <div class="edit-cell" style="flex-grow: {1 - (activeTab.editSplit ?? 0.5)}">
+            <Viewer tab={activeTab} paneId={pane.id} wrap={pane.wrap} />
+          </div>
         </div>
       {:else}
         <Viewer tab={activeTab} paneId={pane.id} wrap={pane.wrap} />

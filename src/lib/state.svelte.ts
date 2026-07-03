@@ -14,6 +14,7 @@ export interface Tab {
   content: string;
   savedContent: string;
   termId?: number;
+  editSplit?: number;
 }
 
 export interface Pane {
