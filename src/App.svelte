@@ -2,21 +2,25 @@
   import { onMount } from "svelte";
   import { open } from "@tauri-apps/plugin-dialog";
   import { initialRoot } from "./lib/api";
-  import { toUiPath } from "./lib/paths";
-  import { app } from "./lib/state.svelte";
+  import { basename, toUiPath } from "./lib/paths";
+  import { initPrefs, prefs } from "./lib/prefs.svelte";
+  import { addRoot, app, openTerminal } from "./lib/state.svelte";
   import PaneView from "./components/PaneView.svelte";
   import Sidebar from "./components/Sidebar.svelte";
 
   let panesEl: HTMLElement | undefined = $state();
 
+  const recentsToShow = $derived(prefs.recents.filter((p) => !prefs.favorites.includes(p)));
+
   onMount(async () => {
+    await initPrefs();
     const root = await initialRoot();
-    if (root && !app.root) app.root = root;
+    if (root && app.sections.length === 0) addRoot(root);
   });
 
-  async function openFolder() {
+  async function openFolder(sectionId?: number) {
     const dir = await open({ directory: true });
-    if (typeof dir === "string") app.root = toUiPath(dir);
+    if (typeof dir === "string") addRoot(toUiPath(dir), sectionId);
   }
 
   function drag(e: PointerEvent, move: (ev: PointerEvent) => void) {
@@ -58,16 +62,43 @@
       e.preventDefault();
       app.sidebarVisible = !app.sidebarVisible;
     }
+    if (e.ctrlKey && e.key === "`" && app.sections.length > 0) {
+      e.preventDefault();
+      openTerminal();
+    }
   }
 </script>
 
 <svelte:window onkeydown={onKeydown} />
 
-{#if !app.root}
+{#if app.sections.length === 0}
   <div class="welcome">
     <h1>ReadItDown</h1>
     <p>Minimal markdown viewer</p>
-    <button class="primary" onclick={openFolder}>Open Folder</button>
+    <button class="primary" onclick={() => openFolder()}>Open Folder</button>
+    {#if prefs.favorites.length > 0}
+      <div class="start-section">
+        <h2>Favorites</h2>
+        {#each prefs.favorites as p (p)}
+          <button class="start-item" title={p} onclick={() => addRoot(p)}>
+            <span class="start-star">&#9733;</span>
+            <span class="start-name">{basename(p)}</span>
+            <span class="start-path">{p}</span>
+          </button>
+        {/each}
+      </div>
+    {/if}
+    {#if recentsToShow.length > 0}
+      <div class="start-section">
+        <h2>Recent</h2>
+        {#each recentsToShow as p (p)}
+          <button class="start-item" title={p} onclick={() => addRoot(p)}>
+            <span class="start-name">{basename(p)}</span>
+            <span class="start-path">{p}</span>
+          </button>
+        {/each}
+      </div>
+    {/if}
   </div>
 {:else}
   <div class="layout">

@@ -1,7 +1,9 @@
 import { createDir, createFile, deletePath, readTextFile, writeTextFile } from "./api";
 import { basename, extname } from "./paths";
+import { addRecent } from "./prefs.svelte";
+import { createTerminal, disposeTerminal, setTermExitHandler } from "./terminals";
 
-export type TabKind = "markdown" | "image";
+export type TabKind = "markdown" | "image" | "terminal";
 
 export interface Tab {
   id: number;
@@ -11,6 +13,7 @@ export interface Tab {
   editing: boolean;
   content: string;
   savedContent: string;
+  termId?: number;
 }
 
 export interface Pane {
@@ -27,14 +30,91 @@ const IMG_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico
 let nextTabId = 1;
 let nextPaneId = 1;
 
+// The sidebar holds up to two stacked sections (split views). Opening a second
+// folder auto-splits; further folders become tabs in the active section; when a
+// section's last folder tab closes, the split merges back into one section.
+export interface SidebarSection {
+  id: number;
+  roots: string[];
+  activeRoot: string;
+  size: number;
+}
+
+let nextSectionId = 1;
+
 export const app = $state({
-  root: null as string | null,
+  sections: [] as SidebarSection[],
+  activeSectionId: 0,
   panes: [{ id: 0, tabs: [], activeTabId: null, size: 1, wrap: true }] as Pane[],
   activePaneId: 0,
   treeVersion: 0,
   sidebarVisible: true,
   sidebarWidth: 240,
 });
+
+export function allRoots(): string[] {
+  return app.sections.flatMap((s) => s.roots);
+}
+
+export function activeSection(): SidebarSection | null {
+  return app.sections.find((s) => s.id === app.activeSectionId) ?? app.sections[0] ?? null;
+}
+
+export function activeRoot(): string | null {
+  return activeSection()?.activeRoot ?? null;
+}
+
+export function addRoot(path: string, sectionId?: number) {
+  addRecent(path);
+  const owner = app.sections.find((s) => s.roots.includes(path));
+  if (owner) {
+    owner.activeRoot = path;
+    app.activeSectionId = owner.id;
+    return;
+  }
+  if (app.sections.length < 2) {
+    // first folder, or second folder with no split yet: new section (auto-split)
+    const s: SidebarSection = { id: nextSectionId++, roots: [path], activeRoot: path, size: 1 };
+    app.sections.push(s);
+    app.activeSectionId = s.id;
+  } else {
+    // already split: further folders become tabs in the target (or active) section
+    const s =
+      (sectionId !== undefined ? app.sections.find((x) => x.id === sectionId) : undefined) ??
+      activeSection()!;
+    s.roots.push(path);
+    s.activeRoot = path;
+    app.activeSectionId = s.id;
+  }
+}
+
+export function closeRoot(path: string) {
+  const s = app.sections.find((x) => x.roots.includes(path));
+  if (!s) return;
+  const i = s.roots.indexOf(path);
+  s.roots.splice(i, 1);
+  if (s.activeRoot === path && s.roots.length > 0) {
+    s.activeRoot = s.roots[Math.min(i, s.roots.length - 1)];
+  }
+  if (s.roots.length === 0) {
+    // last tab of this view closed: merge the split back into one
+    app.sections.splice(app.sections.indexOf(s), 1);
+    if (app.activeSectionId === s.id && app.sections.length > 0) {
+      app.activeSectionId = app.sections[0].id;
+    }
+    if (app.sections.length === 1) app.sections[0].size = 1;
+  }
+}
+
+// Root a file belongs to (longest matching prefix), for resolving root-absolute
+// links. Falls back to the active root for files outside every open folder.
+export function rootFor(path: string): string {
+  let best = "";
+  for (const r of allRoots()) {
+    if ((path === r || path.startsWith(r + "/")) && r.length > best.length) best = r;
+  }
+  return best || activeRoot() || "";
+}
 
 export function fileKind(path: string): TabKind | null {
   const e = extname(path).toLowerCase();
@@ -83,11 +163,50 @@ export async function openFile(path: string, paneId?: number) {
 export function closeTab(pane: Pane, tabId: number) {
   const i = pane.tabs.findIndex((t) => t.id === tabId);
   if (i < 0) return;
-  pane.tabs.splice(i, 1);
+  const [closed] = pane.tabs.splice(i, 1);
+  if (closed.termId !== undefined) disposeTerminal(closed.termId);
   if (pane.activeTabId === tabId) {
     pane.activeTabId = pane.tabs[Math.min(i, pane.tabs.length - 1)]?.id ?? null;
   }
 }
+
+let nextTermNumber = 1;
+
+export async function openTerminal(paneId?: number) {
+  const pane =
+    paneId === undefined ? activePane() : (app.panes.find((p) => p.id === paneId) ?? activePane());
+  app.activePaneId = pane.id;
+  let termId: number;
+  try {
+    termId = await createTerminal(activeRoot());
+  } catch (e) {
+    console.error("terminal failed:", e);
+    return;
+  }
+  const tab: Tab = {
+    id: nextTabId++,
+    path: "",
+    title: `Terminal ${nextTermNumber++}`,
+    kind: "terminal",
+    editing: false,
+    content: "",
+    savedContent: "",
+    termId,
+  };
+  pane.tabs.push(tab);
+  pane.activeTabId = tab.id;
+}
+
+// the shell exited (e.g. the user typed `exit`) -> close its tab
+setTermExitHandler((termId) => {
+  for (const pane of app.panes) {
+    const tab = pane.tabs.find((t) => t.termId === termId);
+    if (tab) {
+      closeTab(pane, tab.id);
+      return;
+    }
+  }
+});
 
 export function splitPane() {
   const pane = activePane();
@@ -100,19 +219,24 @@ export function splitPane() {
     wrap: pane.wrap,
   };
   const active = pane.tabs.find((t) => t.id === pane.activeTabId);
-  if (active) {
+  if (active && active.kind !== "terminal") {
     const copy: Tab = { ...active, id: nextTabId++, editing: false };
     newPane.tabs.push(copy);
     newPane.activeTabId = copy.id;
   }
   app.panes.splice(idx + 1, 0, newPane);
   app.activePaneId = newPane.id;
+  // splitting a terminal starts a fresh shell in the new pane, like VS Code
+  if (active?.kind === "terminal") openTerminal(newPane.id);
 }
 
 export function closePane(paneId: number) {
   if (app.panes.length <= 1) return;
   const i = app.panes.findIndex((p) => p.id === paneId);
   if (i < 0) return;
+  for (const t of app.panes[i].tabs) {
+    if (t.termId !== undefined) disposeTerminal(t.termId);
+  }
   app.panes.splice(i, 1);
   if (app.activePaneId === paneId) app.activePaneId = app.panes[Math.max(0, i - 1)].id;
 }

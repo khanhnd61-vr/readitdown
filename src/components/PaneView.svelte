@@ -5,12 +5,14 @@
     app,
     closePane,
     closeTab,
+    openTerminal,
     saveTab,
     splitPane,
     type Pane,
     type Tab,
   } from "../lib/state.svelte";
   import Editor from "./Editor.svelte";
+  import TerminalView from "./TerminalView.svelte";
   import Viewer from "./Viewer.svelte";
 
   let { pane }: { pane: Pane } = $props();
@@ -60,6 +62,12 @@
           </svg>
         </button>
       {/if}
+      <button title="New terminal (Ctrl+`)" onclick={() => openTerminal(pane.id)}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="4 17 10 11 4 5" />
+          <line x1="12" y1="19" x2="20" y2="19" />
+        </svg>
+      </button>
       <button
         title="Word wrap (off = horizontal scroll)"
         class:active={pane.wrap}
@@ -85,7 +93,9 @@
   </div>
   {#if activeTab}
     {#key activeTab.id}
-      {#if activeTab.kind === "image"}
+      {#if activeTab.kind === "terminal"}
+        <TerminalView termId={activeTab.termId ?? -1} />
+      {:else if activeTab.kind === "image"}
         <div class="content image-view">
           <img src={convertFileSrc(activeTab.path)} alt={activeTab.title} />
         </div>

@@ -98,6 +98,51 @@ button.primary:hover {
   background: #026ec1;
 }
 
+.start-section {
+  width: min(440px, 80vw);
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.start-section h2 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--fg-muted);
+  margin: 0 0 4px;
+  padding: 0 8px;
+}
+
+.start-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 8px;
+  border-radius: 4px;
+  text-align: left;
+}
+
+.start-item .start-star {
+  color: #e3b341;
+  font-size: 11px;
+}
+
+.start-item .start-name {
+  color: #3794ff;
+  flex: none;
+}
+
+.start-item .start-path {
+  color: var(--fg-muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* layout */
 
 .layout {
@@ -127,11 +172,76 @@ button.primary:hover {
   min-height: 0;
 }
 
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-basis: 0;
+}
+
+.divider-h {
+  height: 4px;
+  flex: none;
+  cursor: row-resize;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+}
+
+.divider-h:hover {
+  background: var(--focus);
+  border-top-color: var(--focus);
+}
+
+.folder-tabs {
+  display: flex;
+  flex: none;
+  overflow-x: auto;
+  background: var(--bg-rail);
+  scrollbar-width: none;
+}
+
+.folder-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.folder-tab {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 4px 4px 10px;
+  border-right: 1px solid var(--bg);
+  background: var(--bg-tab);
+  color: var(--fg-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.folder-tab.active {
+  background: var(--bg-side);
+  color: var(--fg);
+}
+
+.folder-tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.folder-tab:hover .tab-close,
+.folder-tab.active .tab-close {
+  visibility: visible;
+}
+
 .sidebar-header {
   display: flex;
   align-items: center;
   gap: 2px;
   padding: 6px 4px 6px 16px;
+}
+
+.sidebar-header button.star.fav {
+  color: #e3b341;
 }
 
 .sidebar-header button {
@@ -426,6 +536,15 @@ button.primary:hover {
 
 .image-view img {
   max-width: 100%;
+}
+
+/* terminal */
+
+.terminal-view {
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+  padding: 4px 0 4px 10px;
 }
 
 /* editor */

@@ -1,12 +1,12 @@
 <script lang="ts">
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { renderMarkdown } from "../lib/markdown";
-  import { app, openFile, type Tab } from "../lib/state.svelte";
+  import { openFile, rootFor, type Tab } from "../lib/state.svelte";
 
   let { tab, paneId, wrap }: { tab: Tab; paneId: number; wrap: boolean } = $props();
 
   let container: HTMLElement;
-  const html = $derived(renderMarkdown(tab.content, tab.path, app.root ?? ""));
+  const html = $derived(renderMarkdown(tab.content, tab.path, rootFor(tab.path)));
 
   function onClick(e: MouseEvent) {
     const a = (e.target as HTMLElement).closest("a");

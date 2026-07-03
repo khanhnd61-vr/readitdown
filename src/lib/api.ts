@@ -22,3 +22,12 @@ export const createDir = (dir: string, relPath: string) =>
 export const deletePath = (path: string) => invoke<void>("delete_path", { path });
 
 export const initialRoot = () => invoke<string | null>("initial_root");
+
+export interface Prefs {
+  favorites: string[];
+  recents: string[];
+}
+
+export const loadPrefs = () => invoke<Prefs>("load_prefs");
+
+export const savePrefs = (prefs: Prefs) => invoke<void>("save_prefs", { prefs });

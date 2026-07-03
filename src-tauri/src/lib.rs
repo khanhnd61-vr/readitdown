@@ -1,7 +1,10 @@
-use serde::Serialize;
+mod terminal;
+
+use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::{Component, Path};
+use std::path::{Component, Path, PathBuf};
 use std::sync::OnceLock;
+use tauri::Manager;
 
 static INITIAL_ROOT: OnceLock<Option<String>> = OnceLock::new();
 
@@ -108,6 +111,38 @@ fn initial_root() -> Option<String> {
     INITIAL_ROOT.get().cloned().flatten()
 }
 
+#[derive(Serialize, Deserialize, Default)]
+pub struct Prefs {
+    #[serde(default)]
+    favorites: Vec<String>,
+    #[serde(default)]
+    recents: Vec<String>,
+}
+
+fn prefs_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    Ok(dir.join("prefs.json"))
+}
+
+#[tauri::command]
+fn load_prefs(app: tauri::AppHandle) -> Prefs {
+    prefs_path(&app)
+        .ok()
+        .and_then(|p| fs::read_to_string(p).ok())
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+#[tauri::command]
+fn save_prefs(app: tauri::AppHandle, prefs: Prefs) -> Result<(), String> {
+    let path = prefs_path(&app)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let json = serde_json::to_string_pretty(&prefs).map_err(|e| e.to_string())?;
+    fs::write(&path, json).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let root = std::env::args().nth(1).and_then(|arg| {
@@ -119,6 +154,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .manage(terminal::TermState::default())
         .invoke_handler(tauri::generate_handler![
             list_dir,
             read_text_file,
@@ -126,7 +162,13 @@ pub fn run() {
             create_file,
             create_dir,
             delete_path,
-            initial_root
+            initial_root,
+            load_prefs,
+            save_prefs,
+            terminal::term_create,
+            terminal::term_write,
+            terminal::term_resize,
+            terminal::term_kill
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
