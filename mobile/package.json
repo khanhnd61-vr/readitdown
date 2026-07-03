@@ -1,0 +1,32 @@
+{
+  "name": "readitdown-mobile",
+  "version": "0.2.0",
+  "description": "ReadItDown mobile - markdown viewer for public GitHub repos",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "sync": "vite build && cap sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/browser": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "@capacitor/preferences": "^7.0.0",
+    "github-markdown-css": "^5.7.0",
+    "markdown-it": "^14.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@types/markdown-it": "^14.1.2",
+    "svelte": "^5.15.0",
+    "svelte-check": "^4.1.0",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.0"
+  }
+}

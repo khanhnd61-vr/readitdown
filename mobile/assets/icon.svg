@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 120">
+  <!-- Source glyph for all generated assets: blocky "M" + down arrow, -->
+  <!-- VS Code Dark+ palette. Edit this, then run scripts/make-assets.cjs. -->
+  <path fill="#f2f2f2" d="M0 120V0h30l35 45 35-45h30v120h-30V45L70 90 35 45v75Z"/>
+  <path fill="#0078d4" d="M175 5h20v55h25l-35 50-35-50h25Z"/>
+</svg>
