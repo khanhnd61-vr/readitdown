@@ -1,6 +1,7 @@
 # ReadItDown - Minimal markdown viewer
 
-Use online or download offline [here](https://havi.fit/readitdown/)
+Download [here](https://havi.fit/readitdown/).
+Lazy web-based viewer is also available.
 
 ![image](docs/screenshot.png)
 
