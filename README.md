@@ -80,8 +80,8 @@ Artifacts land in `src-tauri/target/release/`:
   - Linux: deb, rpm, AppImage
   - macOS: `macos/ReadItDown.app`, `dmg/ReadItDown_*.dmg` (for the host arch; on Apple
     Silicon add `-- --target universal-apple-darwin` to build a universal binary)
-  - Windows: `nsis/ReadItDown_0.1.0_x64-setup.exe` (NSIS installer) and
-    `msi/ReadItDown_0.1.0_x64_en-US.msi` (MSI installer)
+  - Windows: `nsis/ReadItDown_0.2.0_x64-setup.exe` (NSIS installer) and
+    `msi/ReadItDown_0.2.0_x64_en-US.msi` (MSI installer)
  
 ## CLI usage
 
@@ -105,16 +105,16 @@ Pick one:
 ```sh
 # deb (Ubuntu/Debian): installs /usr/bin/readitdown + desktop entry,
 # remove with `sudo apt remove read-it-down`
-sudo apt install ./src-tauri/target/release/bundle/deb/ReadItDown_0.1.0_amd64.deb
+sudo apt install ./src-tauri/target/release/bundle/deb/ReadItDown_0.2.0_amd64.deb
 
 # no sudo: copy the binary onto your PATH
 install -Dm755 src-tauri/target/release/readitdown ~/.local/bin/readitdown
 
 # AppImage: portable single file, bundles its own libs
-chmod +x src-tauri/target/release/bundle/appimage/ReadItDown_0.1.0_amd64.AppImage
+chmod +x src-tauri/target/release/bundle/appimage/ReadItDown_0.2.0_amd64.AppImage
 ```
 
-rpm-based distros: use `bundle/rpm/ReadItDown-0.1.0-1.x86_64.rpm`.
+rpm-based distros: use `bundle/rpm/ReadItDown-0.2.0-1.x86_64.rpm`.
 
 ### macOS
 
@@ -128,7 +128,7 @@ then either:
   ```
 
 - or, if you produced a `.dmg`, open
-  `src-tauri/target/release/bundle/dmg/ReadItDown_0.1.0_*.dmg` and drag ReadItDown to
+  `src-tauri/target/release/bundle/dmg/ReadItDown_0.2.0_*.dmg` and drag ReadItDown to
   Applications
 
 The app is unsigned, so the first launch needs right-click -> Open (or allow it under
@@ -138,8 +138,8 @@ System Settings -> Privacy & Security).
 
 Run either installer from `src-tauri\target\release\bundle\`:
 
-- `nsis\ReadItDown_0.1.0_x64-setup.exe` - the NSIS setup wizard (recommended), or
-- `msi\ReadItDown_0.1.0_x64_en-US.msi` - the MSI package
+- `nsis\ReadItDown_0.2.0_x64-setup.exe` - the NSIS setup wizard (recommended), or
+- `msi\ReadItDown_0.2.0_x64_en-US.msi` - the MSI package
 
 Both add a Start Menu entry and put `readitdown.exe` on `PATH`. You can also just run the
 standalone `src-tauri\target\release\readitdown.exe` without installing.
