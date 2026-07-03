@@ -67,10 +67,15 @@ Open the `sample/` folder to try every feature.
 
 ## Build
 
-Same command on all platforms, artifacts differ:
+For Linux and Windows:
 
 ```sh
 npm run tauri build
+```
+
+For macOS
+```sh
+CI=true npm run tauri build
 ```
 
 Artifacts land in `src-tauri/target/release/`:
@@ -150,6 +155,6 @@ Run anyway**.
 
 ## Release
 
-Linux: `src-tauri/target/release/bundle/deb/*.deb`
-macOS: `src-tauri/target/release/bundle/dmg/*.dmg`
-Windows: `src-tauri/target/release/bundle/nsis/*.exe`
+- Linux: `src-tauri/target/release/bundle/deb/*.deb`
+- macOS: `src-tauri/target/release/bundle/dmg/*.dmg`
+- Windows: `src-tauri/target/release/bundle/nsis/*.exe`
