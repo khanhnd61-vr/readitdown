@@ -7,18 +7,11 @@ Lazy web-based viewer is also available.
 
 ## Features
 
-- Folder tree sidebar, open any directory
-- Multiple tabs per pane, split panes side by side, drag divider to resize
-- Edit while viewing: CodeMirror on the left, live preview on the right, Ctrl+S to save
-- Create new files (nested paths like `notes/new.md` work)
-- Two view modes per pane: wrap lines, or cut off with a horizontal scrollbar
-- Reload button: re-read the open file from disk when another program changed it
-- Renders embedded HTML and images (png, jpg, gif, ...)
-- HTML files: rendered preview (own CSS/JS, relative assets work), same
-  edit-while-viewing split as markdown
-- PDF viewer: selectable text, zoom controls (fit width by default)
-- Links: external URLs open in the browser, relative `.md`/`.html` links open in
-  a tab, `/absolute` links resolve from the opened folder, `#anchors` scroll
+- Multi-view markdown reader/editor
+- Multi-folder explorer
+- Integrated terminal
+- PDF/HTML/Image viewer
+- Text editor
 
 ## Prerequisites
 
@@ -83,16 +76,6 @@ For macOS
 CI=true npm run tauri build
 ```
 
-Artifacts land in `src-tauri/target/release/`:
-
-- `readitdown` (`readitdown.exe` on Windows) - the plain binary
-- `bundle/` - installable packages
-  - Linux: deb, rpm, AppImage
-  - macOS: `macos/ReadItDown.app`, `dmg/ReadItDown_*.dmg` (for the host arch; on Apple
-    Silicon add `-- --target universal-apple-darwin` to build a universal binary)
-  - Windows: `nsis/ReadItDown_0.2.0_x64-setup.exe` (NSIS installer) and
-    `msi/ReadItDown_0.2.0_x64_en-US.msi` (MSI installer)
- 
 ## CLI usage
 
 ```sh
@@ -103,8 +86,7 @@ readitdown ~/docs # open a specific folder
 
 On Linux and macOS `readitdown` detaches from the terminal (release builds), so the
 prompt returns immediately; set `READITDOWN_FOREGROUND=1` to keep it attached. On
-Windows the GUI binary already returns the prompt right away (use `readitdown.exe`, or
-`readitdown.exe .` to open the current folder).
+Windows the GUI binary already returns the prompt right away.
 
 ## Install
 
@@ -113,18 +95,17 @@ Windows the GUI binary already returns the prompt right away (use `readitdown.ex
 Pick one:
 
 ```sh
-# deb (Ubuntu/Debian): installs /usr/bin/readitdown + desktop entry,
-# remove with `sudo apt remove read-it-down`
-sudo apt install ./src-tauri/target/release/bundle/deb/ReadItDown_0.2.0_amd64.deb
+# system installation
+sudo apt install ./src-tauri/target/release/bundle/deb/ReadItDown_0.3.0_amd64.deb
 
 # no sudo: copy the binary onto your PATH
 install -Dm755 src-tauri/target/release/readitdown ~/.local/bin/readitdown
 
 # AppImage: portable single file, bundles its own libs
-chmod +x src-tauri/target/release/bundle/appimage/ReadItDown_0.2.0_amd64.AppImage
+chmod +x src-tauri/target/release/bundle/appimage/ReadItDown_0.3.0_amd64.AppImage
 ```
 
-rpm-based distros: use `bundle/rpm/ReadItDown-0.2.0-1.x86_64.rpm`.
+rpm-based distros: use `bundle/rpm/ReadItDown-0.3.0-1.x86_64.rpm`.
 
 ### macOS
 
@@ -138,25 +119,19 @@ then either:
   ```
 
 - or, if you produced a `.dmg`, open
-  `src-tauri/target/release/bundle/dmg/ReadItDown_0.2.0_*.dmg` and drag ReadItDown to
+  `src-tauri/target/release/bundle/dmg/ReadItDown_0.3.0_*.dmg` and drag ReadItDown to
   Applications
 
-The app is unsigned, so the first launch needs right-click -> Open (or allow it under
-System Settings -> Privacy & Security).
+The app is unsigned, so the first launch needs right-click -> Open (or allow it under System Settings -> Privacy & Security).
 
 ### Windows
 
 Run either installer from `src-tauri\target\release\bundle\`:
 
-- `nsis\ReadItDown_0.2.0_x64-setup.exe` - the NSIS setup wizard (recommended), or
-- `msi\ReadItDown_0.2.0_x64_en-US.msi` - the MSI package
+- `nsis\ReadItDown_0.3.0_x64-setup.exe` - the NSIS setup wizard (recommended), or
+- `msi\ReadItDown_0.3.0_x64_en-US.msi` - the MSI package
 
-Both add a Start Menu entry and put `readitdown.exe` on `PATH`. You can also just run the
-standalone `src-tauri\target\release\readitdown.exe` without installing.
-
-The installer is unsigned, so SmartScreen may warn on first run: click **More info ->
-Run anyway**.
-
+Both add a Start Menu entry and put `readitdown.exe` on `PATH`. You can also just run the standalone `src-tauri\target\release\readitdown.exe` without installing.
 
 ## Release
 
