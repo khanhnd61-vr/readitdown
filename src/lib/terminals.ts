@@ -91,6 +91,26 @@ export async function createTerminal(cwd: string | null): Promise<number> {
   return id;
 }
 
+export function terminalHasSelection(id: number): boolean {
+  return sessions.get(id)?.term.hasSelection() ?? false;
+}
+
+export function copyTerminalSelection(id: number) {
+  const term = sessions.get(id)?.term;
+  if (!term?.hasSelection()) return;
+  navigator.clipboard.writeText(term.getSelection()).catch(console.error);
+}
+
+export function pasteIntoTerminal(id: number) {
+  const term = sessions.get(id)?.term;
+  if (!term) return;
+  navigator.clipboard
+    .readText()
+    .then((t) => t && term.paste(t))
+    .catch(console.error);
+  term.focus();
+}
+
 export function attachTerminal(id: number, container: HTMLElement) {
   const s = sessions.get(id);
   if (!s) return;

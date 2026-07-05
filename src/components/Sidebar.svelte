@@ -8,6 +8,8 @@
     createNewFile,
     createNewFolder,
     deleteEntry,
+    reloadTab,
+    tabsUnderRoots,
     type SidebarSection,
   } from "../lib/state.svelte";
   import { loadChildren, type Node } from "../lib/tree";
@@ -117,6 +119,23 @@
     }
   }
 
+  // Re-read every open file that lives under one of this section's folders,
+  // and refresh its tree. Reload is manual by design (no file watching).
+  async function reloadSection(section: SidebarSection) {
+    const tabs = tabsUnderRoots(section.roots);
+    const dirty = tabs.filter((t) => t.content !== t.savedContent);
+    if (
+      dirty.length > 0 &&
+      !(await confirm(
+        `Reload ${tabs.length} open file${tabs.length > 1 ? "s" : ""} from disk and discard unsaved changes in ${dirty.length}?`,
+        { title: "Reload folder", kind: "warning" },
+      ))
+    )
+      return;
+    await Promise.all(tabs.map(reloadTab));
+    app.treeVersion++;
+  }
+
   function startSectionDrag(e: PointerEvent) {
     if (app.sections.length < 2) return;
     e.preventDefault();
@@ -195,6 +214,12 @@
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             <line x1="12" y1="11" x2="12" y2="17" />
             <line x1="9" y1="14" x2="15" y2="14" />
+          </svg>
+        </button>
+        <button title="Reload open files from disk" onclick={() => reloadSection(section)}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
           </svg>
         </button>
         <button title="Open folder in this view" onclick={() => openFolder(section.id)}>&#8943;</button>

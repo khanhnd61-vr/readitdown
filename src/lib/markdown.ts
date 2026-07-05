@@ -1,8 +1,10 @@
 import MarkdownIt from "markdown-it";
+import katex from "@vscode/markdown-it-katex";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { dirname, normalize, resolvePath } from "./paths";
 
-const md = new MarkdownIt({ html: true, linkify: true });
+// $...$ inline and $$...$$ block math rendered with KaTeX
+const md = new MarkdownIt({ html: true, linkify: true }).use(katex, { throwOnError: false });
 
 export const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 

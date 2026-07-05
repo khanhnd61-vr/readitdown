@@ -1,5 +1,6 @@
 import { mount } from "svelte";
 import "github-markdown-css/github-markdown-dark.css";
+import "katex/dist/katex.min.css";
 import "./app.css";
 import App from "./App.svelte";
 

@@ -329,6 +329,16 @@ button.primary:hover {
   color: var(--fg-bright);
 }
 
+.ctx-menu button:disabled {
+  color: var(--fg-muted);
+  cursor: default;
+}
+
+.ctx-menu button:disabled:hover {
+  background: none;
+  color: var(--fg-muted);
+}
+
 .ctx-sep {
   height: 1px;
   background: #454545;

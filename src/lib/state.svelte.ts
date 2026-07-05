@@ -211,6 +211,13 @@ export async function reloadTab(tab: Tab) {
   }
 }
 
+// Open file tabs living under any of the given roots (terminals have no path).
+export function tabsUnderRoots(roots: string[]): Tab[] {
+  return allPanes()
+    .flatMap((p) => p.tabs)
+    .filter((t) => t.path && roots.some((r) => t.path === r || t.path.startsWith(r + "/")));
+}
+
 export function closeTab(pane: Pane, tabId: number) {
   const i = pane.tabs.findIndex((t) => t.id === tabId);
   if (i < 0) return;
@@ -260,6 +267,7 @@ setTermExitHandler((termId) => {
   }
 });
 
+// New panes start empty; the user opens what they want from the sidebar.
 function split(dir: "right" | "down") {
   const pane = activePane();
   const col = app.columns.find((c) => c.panes.includes(pane))!;
@@ -270,12 +278,6 @@ function split(dir: "right" | "down") {
     size: dir === "down" ? pane.size : 1,
     wrap: pane.wrap,
   };
-  const active = pane.tabs.find((t) => t.id === pane.activeTabId);
-  if (active && active.kind !== "terminal") {
-    const copy: Tab = { ...active, id: nextTabId++, editing: false };
-    newPane.tabs.push(copy);
-    newPane.activeTabId = copy.id;
-  }
   if (dir === "down") {
     col.panes.splice(col.panes.indexOf(pane) + 1, 0, newPane);
   } else {
@@ -283,8 +285,6 @@ function split(dir: "right" | "down") {
     app.columns.splice(app.columns.indexOf(col) + 1, 0, newCol);
   }
   app.activePaneId = newPane.id;
-  // splitting a terminal starts a fresh shell in the new pane, like VS Code
-  if (active?.kind === "terminal") openTerminal(newPane.id);
 }
 
 export function splitPane() {
