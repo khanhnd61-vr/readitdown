@@ -6,12 +6,14 @@
     closePane,
     closeTab,
     openTerminal,
+    reloadTab,
     saveTab,
     splitPane,
     type Pane,
     type Tab,
   } from "../lib/state.svelte";
   import Editor from "./Editor.svelte";
+  import PdfView from "./PdfView.svelte";
   import TerminalView from "./TerminalView.svelte";
   import Viewer from "./Viewer.svelte";
 
@@ -27,6 +29,12 @@
     e.stopPropagation();
     if (isDirty(t) && !(await confirm(`Close "${t.title}" without saving?`))) return;
     closeTab(pane, t.id);
+  }
+
+  async function onReload(t: Tab) {
+    if (isDirty(t) && !(await confirm(`Reload "${t.title}" from disk and discard unsaved changes?`)))
+      return;
+    reloadTab(t);
   }
 
   function startEditDrag(e: PointerEvent, tab: Tab) {
@@ -66,7 +74,15 @@
       {#if activeTab && isDirty(activeTab)}
         <button onclick={() => activeTab && saveTab(activeTab)}>Save</button>
       {/if}
-      {#if activeTab?.kind === "markdown"}
+      {#if activeTab && activeTab.kind !== "terminal"}
+        <button title="Reload from disk" onclick={() => activeTab && onReload(activeTab)}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
+        </button>
+      {/if}
+      {#if activeTab?.kind === "markdown" || activeTab?.kind === "html"}
         <button
           title="Edit (side by side preview)"
           class:active={activeTab.editing}
@@ -107,13 +123,16 @@
     </div>
   </div>
   {#if activeTab}
-    {#key activeTab.id}
+    {#key `${activeTab.id}:${activeTab.fileVersion}`}
       {#if activeTab.kind === "terminal"}
         <TerminalView termId={activeTab.termId ?? -1} />
       {:else if activeTab.kind === "image"}
         <div class="content image-view">
-          <img src={convertFileSrc(activeTab.path)} alt={activeTab.title} />
+          <!-- ?v= busts the webview cache when the file changes on disk -->
+          <img src={`${convertFileSrc(activeTab.path)}?v=${activeTab.fileVersion}`} alt={activeTab.title} />
         </div>
+      {:else if activeTab.kind === "pdf"}
+        <PdfView tab={activeTab} />
       {:else if activeTab.editing}
         <div class="edit-split">
           <div class="edit-cell" style="flex-grow: {activeTab.editSplit ?? 0.5}">

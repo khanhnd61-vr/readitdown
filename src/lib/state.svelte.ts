@@ -3,7 +3,7 @@ import { basename, extname } from "./paths";
 import { addRecent } from "./prefs.svelte";
 import { createTerminal, disposeTerminal, setTermExitHandler } from "./terminals";
 
-export type TabKind = "markdown" | "image" | "terminal";
+export type TabKind = "markdown" | "html" | "pdf" | "image" | "terminal";
 
 export interface Tab {
   id: number;
@@ -13,6 +13,8 @@ export interface Tab {
   editing: boolean;
   content: string;
   savedContent: string;
+  // bumped when the file changes on disk (image/pdf tabs re-render from it)
+  fileVersion: number;
   termId?: number;
   editSplit?: number;
 }
@@ -26,6 +28,7 @@ export interface Pane {
 }
 
 const MD_EXT = new Set(["md", "markdown", "mdown", "txt"]);
+const HTML_EXT = new Set(["html", "htm"]);
 const IMG_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico", "avif"]);
 
 let nextTabId = 1;
@@ -120,6 +123,8 @@ export function rootFor(path: string): string {
 export function fileKind(path: string): TabKind | null {
   const e = extname(path).toLowerCase();
   if (MD_EXT.has(e)) return "markdown";
+  if (HTML_EXT.has(e)) return "html";
+  if (e === "pdf") return "pdf";
   if (IMG_EXT.has(e)) return "image";
   return null;
 }
@@ -140,7 +145,7 @@ export async function openFile(path: string, paneId?: number) {
     return;
   }
   let content = "";
-  if (kind === "markdown") {
+  if (kind === "markdown" || kind === "html") {
     try {
       content = await readTextFile(path);
     } catch (e) {
@@ -156,9 +161,28 @@ export async function openFile(path: string, paneId?: number) {
     editing: false,
     content,
     savedContent: content,
+    fileVersion: 0,
   };
   pane.tabs.push(tab);
   pane.activeTabId = tab.id;
+}
+
+// Re-read the file from disk (another process may have changed it). Text tabs
+// replace their buffer (caller confirms first if there are unsaved edits);
+// image/pdf tabs re-render via fileVersion.
+export async function reloadTab(tab: Tab) {
+  if (tab.kind === "image" || tab.kind === "pdf") {
+    tab.fileVersion++;
+    return;
+  }
+  if (tab.kind !== "markdown" && tab.kind !== "html") return;
+  try {
+    const content = await readTextFile(tab.path);
+    tab.content = content;
+    tab.savedContent = content;
+  } catch (e) {
+    console.error("reload failed:", e);
+  }
 }
 
 export function closeTab(pane: Pane, tabId: number) {
@@ -192,6 +216,7 @@ export async function openTerminal(paneId?: number) {
     editing: false,
     content: "",
     savedContent: "",
+    fileVersion: 0,
     termId,
   };
   pane.tabs.push(tab);
@@ -235,10 +260,10 @@ export function closePane(paneId: number) {
   if (app.panes.length <= 1) return;
   const i = app.panes.findIndex((p) => p.id === paneId);
   if (i < 0) return;
-  for (const t of app.panes[i].tabs) {
+  const [closed] = app.panes.splice(i, 1);
+  for (const t of closed.tabs) {
     if (t.termId !== undefined) disposeTerminal(t.termId);
   }
-  app.panes.splice(i, 1);
   if (app.activePaneId === paneId) app.activePaneId = app.panes[Math.max(0, i - 1)].id;
 }
 
@@ -257,7 +282,7 @@ export async function createNewFile(dir: string, relPath: string) {
   await openFile(path);
   const pane = activePane();
   const tab = pane.tabs.find((t) => t.id === pane.activeTabId);
-  if (tab?.kind === "markdown") tab.editing = true;
+  if (tab?.kind === "markdown" || tab?.kind === "html") tab.editing = true;
 }
 
 export async function createNewFolder(dir: string, relPath: string) {

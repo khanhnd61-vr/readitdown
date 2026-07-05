@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^8.0.0",
+    "@codemirror/lang-html": "^6.4.11",
     "@codemirror/lang-markdown": "^6.3.0",
     "@codemirror/state": "^6.4.1",
     "@codemirror/view": "^6.34.0",
@@ -23,7 +24,8 @@
     "@xterm/xterm": "^6.0.0",
     "codemirror": "^6.0.1",
     "github-markdown-css": "^5.7.0",
-    "markdown-it": "^14.1.0"
+    "markdown-it": "^14.1.0",
+    "pdfjs-dist": "^6.1.200"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^5.0.0",

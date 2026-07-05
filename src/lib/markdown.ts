@@ -4,9 +4,9 @@ import { dirname, normalize, resolvePath } from "./paths";
 
 const md = new MarkdownIt({ html: true, linkify: true });
 
-const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+export const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
-function resolveLink(href: string, fileDir: string, root: string): string {
+export function resolveLink(href: string, fileDir: string, root: string): string {
   const clean = decodeURI(href.split("#")[0].split("?")[0]);
   if (clean.startsWith("/")) return normalize(root + clean);
   return resolvePath(fileDir, clean);

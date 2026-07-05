@@ -12,9 +12,13 @@ Lazy web-based viewer is also available.
 - Edit while viewing: CodeMirror on the left, live preview on the right, Ctrl+S to save
 - Create new files (nested paths like `notes/new.md` work)
 - Two view modes per pane: wrap lines, or cut off with a horizontal scrollbar
+- Reload button: re-read the open file from disk when another program changed it
 - Renders embedded HTML and images (png, jpg, gif, ...)
-- Links: external URLs open in the browser, relative `.md` links open in a tab,
-  `/absolute` links resolve from the opened folder, `#anchors` scroll
+- HTML files: rendered preview (own CSS/JS, relative assets work), same
+  edit-while-viewing split as markdown
+- PDF viewer: selectable text, zoom controls (fit width by default)
+- Links: external URLs open in the browser, relative `.md`/`.html` links open in
+  a tab, `/absolute` links resolve from the opened folder, `#anchors` scroll
 
 ## Prerequisites
 

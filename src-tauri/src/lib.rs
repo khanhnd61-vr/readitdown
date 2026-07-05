@@ -154,6 +154,21 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        // Nothing may swap the webview out for a website (e.g. WebKitGTK's
+        // default middle-click-on-link navigation) - there is no way back and
+        // the whole session (tabs, terminals) would be lost. External URLs
+        // only ever open via the opener plugin.
+        .plugin(
+            tauri::plugin::Builder::<_, ()>::new("navigation-guard")
+                .on_navigation(|_webview, url| {
+                    matches!(url.scheme(), "tauri" | "asset" | "about")
+                        || matches!(
+                            url.host_str(),
+                            Some("localhost") | Some("tauri.localhost") | Some("asset.localhost")
+                        )
+                })
+                .build(),
+        )
         .manage(terminal::TermState::default())
         .invoke_handler(tauri::generate_handler![
             list_dir,

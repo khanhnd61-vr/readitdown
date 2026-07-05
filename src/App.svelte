@@ -66,10 +66,22 @@
       e.preventDefault();
       openTerminal();
     }
+    // a webview reload wipes the whole session (tabs, panes, terminals);
+    // swallow the browser reload shortcuts, but keep Ctrl+R in terminals
+    // (shell reverse search)
+    if (e.key === "F5" || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "r")) {
+      if (!(e.target as HTMLElement)?.closest?.(".terminal-view")) e.preventDefault();
+    }
+  }
+
+  // the native webview context menu offers Reload, same session-wiping hazard;
+  // the app draws its own menus (file tree), so drop the native one everywhere
+  function onContextMenu(e: MouseEvent) {
+    e.preventDefault();
   }
 </script>
 
-<svelte:window onkeydown={onKeydown} />
+<svelte:window onkeydown={onKeydown} oncontextmenu={onContextMenu} />
 
 {#if app.sections.length === 0}
   <div class="welcome">
