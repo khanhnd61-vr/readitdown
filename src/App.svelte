@@ -4,11 +4,9 @@
   import { initialRoot } from "./lib/api";
   import { basename, toUiPath } from "./lib/paths";
   import { initPrefs, prefs } from "./lib/prefs.svelte";
-  import { addRoot, app, openTerminal } from "./lib/state.svelte";
+  import { addRoot, app, openTerminal, type Column } from "./lib/state.svelte";
   import PaneView from "./components/PaneView.svelte";
   import Sidebar from "./components/Sidebar.svelte";
-
-  let panesEl: HTMLElement | undefined = $state();
 
   const recentsToShow = $derived(prefs.recents.filter((p) => !prefs.favorites.includes(p)));
 
@@ -41,19 +39,33 @@
     });
   }
 
-  function startPaneDrag(e: PointerEvent, i: number) {
-    if (!panesEl) return;
-    const left = app.panes[i - 1];
-    const right = app.panes[i];
+  function startColDrag(e: PointerEvent, i: number) {
+    const left = app.columns[i - 1];
+    const right = app.columns[i];
     const pair = left.size + right.size;
     const startX = e.clientX;
     const startLeft = left.size;
-    const totalSize = app.panes.reduce((s, p) => s + p.size, 0);
-    const width = panesEl.getBoundingClientRect().width;
+    const totalSize = app.columns.reduce((s, c) => s + c.size, 0);
+    const width = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect().width;
     drag(e, (ev) => {
       const delta = ((ev.clientX - startX) / width) * totalSize;
       left.size = Math.min(pair - 0.15, Math.max(0.15, startLeft + delta));
       right.size = pair - left.size;
+    });
+  }
+
+  function startRowDrag(e: PointerEvent, col: Column, i: number) {
+    const top = col.panes[i - 1];
+    const bottom = col.panes[i];
+    const pair = top.size + bottom.size;
+    const startY = e.clientY;
+    const startTop = top.size;
+    const totalSize = col.panes.reduce((s, p) => s + p.size, 0);
+    const height = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect().height;
+    drag(e, (ev) => {
+      const delta = ((ev.clientY - startY) / height) * totalSize;
+      top.size = Math.min(pair - 0.15, Math.max(0.15, startTop + delta));
+      bottom.size = pair - top.size;
     });
   }
 
@@ -123,13 +135,21 @@
         <button title="Show sidebar (Ctrl+B)" onclick={() => (app.sidebarVisible = true)}>&#9776;</button>
       </div>
     {/if}
-    <main class="panes" bind:this={panesEl}>
-      {#each app.panes as pane, i (pane.id)}
-        {#if i > 0}
+    <main class="panes">
+      {#each app.columns as col, ci (col.id)}
+        {#if ci > 0}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="divider" onpointerdown={(e) => startPaneDrag(e, i)}></div>
+          <div class="divider" onpointerdown={(e) => startColDrag(e, ci)}></div>
         {/if}
-        <PaneView {pane} />
+        <div class="pane-col" style="flex-grow: {col.size}; flex-basis: 0;">
+          {#each col.panes as pane, pi (pane.id)}
+            {#if pi > 0}
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div class="divider-h" onpointerdown={(e) => startRowDrag(e, col, pi)}></div>
+            {/if}
+            <PaneView {pane} />
+          {/each}
+        </div>
       {/each}
     </main>
   </div>

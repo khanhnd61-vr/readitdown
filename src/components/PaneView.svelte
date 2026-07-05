@@ -2,6 +2,7 @@
   import { convertFileSrc } from "@tauri-apps/api/core";
   import { confirm } from "@tauri-apps/plugin-dialog";
   import {
+    allPanes,
     app,
     closePane,
     closeTab,
@@ -9,6 +10,7 @@
     reloadTab,
     saveTab,
     splitPane,
+    splitPaneDown,
     type Pane,
     type Tab,
   } from "../lib/state.svelte";
@@ -111,13 +113,19 @@
           <path d="M3 19h5" />
         </svg>
       </button>
-      <button title="Split pane" onclick={splitPane}>
+      <button title="Split right" onclick={splitPane}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="16" rx="1" />
           <line x1="12" y1="4" x2="12" y2="20" />
         </svg>
       </button>
-      {#if app.panes.length > 1}
+      <button title="Split down" onclick={splitPaneDown}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="16" rx="1" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+        </svg>
+      </button>
+      {#if allPanes().length > 1}
         <button title="Close pane" onclick={() => closePane(pane.id)}>&#10005;</button>
       {/if}
     </div>
@@ -133,6 +141,8 @@
         </div>
       {:else if activeTab.kind === "pdf"}
         <PdfView tab={activeTab} />
+      {:else if activeTab.kind === "text"}
+        <Editor tab={activeTab} wrap={pane.wrap} onsave={() => activeTab && saveTab(activeTab)} />
       {:else if activeTab.editing}
         <div class="edit-split">
           <div class="edit-cell" style="flex-grow: {activeTab.editSplit ?? 0.5}">

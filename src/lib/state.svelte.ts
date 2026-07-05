@@ -3,7 +3,7 @@ import { basename, extname } from "./paths";
 import { addRecent } from "./prefs.svelte";
 import { createTerminal, disposeTerminal, setTermExitHandler } from "./terminals";
 
-export type TabKind = "markdown" | "html" | "pdf" | "image" | "terminal";
+export type TabKind = "markdown" | "html" | "pdf" | "image" | "text" | "terminal";
 
 export interface Tab {
   id: number;
@@ -27,12 +27,30 @@ export interface Pane {
   wrap: boolean;
 }
 
+// Panes are laid out as a row of columns, each column a vertical stack of
+// panes. Split right adds a column; split down adds a pane within the column.
+export interface Column {
+  id: number;
+  size: number;
+  panes: Pane[];
+}
+
 const MD_EXT = new Set(["md", "markdown", "mdown", "txt"]);
 const HTML_EXT = new Set(["html", "htm"]);
+// plain text/code files: open straight in the editor, no rendered view
+// prettier-ignore
+const TEXT_EXT = new Set([
+  "tex", "bib", "py", "c", "h", "cpp", "hpp", "cc", "hh", "cxx", "cu", "cuh",
+  "sh", "bash", "zsh", "js", "mjs", "ts", "json", "yaml", "yml", "toml", "xml",
+  "css", "rs", "go", "java", "rb", "lua", "sql", "ini", "cfg", "conf", "log",
+  "csv", "cmake", "mk", "patch", "diff",
+]);
+const TEXT_NAMES = new Set(["makefile", "gnumakefile", "dockerfile"]);
 const IMG_EXT = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico", "avif"]);
 
 let nextTabId = 1;
 let nextPaneId = 1;
+let nextColId = 1;
 
 // The sidebar holds up to two stacked sections (split views). Opening a second
 // folder auto-splits; further folders become tabs in the active section; when a
@@ -49,7 +67,9 @@ let nextSectionId = 1;
 export const app = $state({
   sections: [] as SidebarSection[],
   activeSectionId: 0,
-  panes: [{ id: 0, tabs: [], activeTabId: null, size: 1, wrap: true }] as Pane[],
+  columns: [
+    { id: 0, size: 1, panes: [{ id: 0, tabs: [], activeTabId: null, size: 1, wrap: true }] },
+  ] as Column[],
   activePaneId: 0,
   treeVersion: 0,
   sidebarVisible: true,
@@ -126,18 +146,24 @@ export function fileKind(path: string): TabKind | null {
   if (HTML_EXT.has(e)) return "html";
   if (e === "pdf") return "pdf";
   if (IMG_EXT.has(e)) return "image";
+  if (TEXT_EXT.has(e) || TEXT_NAMES.has(basename(path).toLowerCase())) return "text";
   return null;
 }
 
+export function allPanes(): Pane[] {
+  return app.columns.flatMap((c) => c.panes);
+}
+
 export function activePane(): Pane {
-  return app.panes.find((p) => p.id === app.activePaneId) ?? app.panes[0];
+  const panes = allPanes();
+  return panes.find((p) => p.id === app.activePaneId) ?? panes[0];
 }
 
 export async function openFile(path: string, paneId?: number) {
   const kind = fileKind(path);
   if (!kind) return;
   const pane =
-    paneId === undefined ? activePane() : (app.panes.find((p) => p.id === paneId) ?? activePane());
+    paneId === undefined ? activePane() : (allPanes().find((p) => p.id === paneId) ?? activePane());
   app.activePaneId = pane.id;
   const existing = pane.tabs.find((t) => t.path === path);
   if (existing) {
@@ -145,7 +171,7 @@ export async function openFile(path: string, paneId?: number) {
     return;
   }
   let content = "";
-  if (kind === "markdown" || kind === "html") {
+  if (kind === "markdown" || kind === "html" || kind === "text") {
     try {
       content = await readTextFile(path);
     } catch (e) {
@@ -175,7 +201,7 @@ export async function reloadTab(tab: Tab) {
     tab.fileVersion++;
     return;
   }
-  if (tab.kind !== "markdown" && tab.kind !== "html") return;
+  if (tab.kind !== "markdown" && tab.kind !== "html" && tab.kind !== "text") return;
   try {
     const content = await readTextFile(tab.path);
     tab.content = content;
@@ -199,7 +225,7 @@ let nextTermNumber = 1;
 
 export async function openTerminal(paneId?: number) {
   const pane =
-    paneId === undefined ? activePane() : (app.panes.find((p) => p.id === paneId) ?? activePane());
+    paneId === undefined ? activePane() : (allPanes().find((p) => p.id === paneId) ?? activePane());
   app.activePaneId = pane.id;
   let termId: number;
   try {
@@ -225,7 +251,7 @@ export async function openTerminal(paneId?: number) {
 
 // the shell exited (e.g. the user typed `exit`) -> close its tab
 setTermExitHandler((termId) => {
-  for (const pane of app.panes) {
+  for (const pane of allPanes()) {
     const tab = pane.tabs.find((t) => t.termId === termId);
     if (tab) {
       closeTab(pane, tab.id);
@@ -234,14 +260,14 @@ setTermExitHandler((termId) => {
   }
 });
 
-export function splitPane() {
+function split(dir: "right" | "down") {
   const pane = activePane();
-  const idx = app.panes.indexOf(pane);
+  const col = app.columns.find((c) => c.panes.includes(pane))!;
   const newPane: Pane = {
     id: nextPaneId++,
     tabs: [],
     activeTabId: null,
-    size: pane.size,
+    size: dir === "down" ? pane.size : 1,
     wrap: pane.wrap,
   };
   const active = pane.tabs.find((t) => t.id === pane.activeTabId);
@@ -250,21 +276,45 @@ export function splitPane() {
     newPane.tabs.push(copy);
     newPane.activeTabId = copy.id;
   }
-  app.panes.splice(idx + 1, 0, newPane);
+  if (dir === "down") {
+    col.panes.splice(col.panes.indexOf(pane) + 1, 0, newPane);
+  } else {
+    const newCol: Column = { id: nextColId++, size: col.size, panes: [newPane] };
+    app.columns.splice(app.columns.indexOf(col) + 1, 0, newCol);
+  }
   app.activePaneId = newPane.id;
   // splitting a terminal starts a fresh shell in the new pane, like VS Code
   if (active?.kind === "terminal") openTerminal(newPane.id);
 }
 
+export function splitPane() {
+  split("right");
+}
+
+export function splitPaneDown() {
+  split("down");
+}
+
 export function closePane(paneId: number) {
-  if (app.panes.length <= 1) return;
-  const i = app.panes.findIndex((p) => p.id === paneId);
-  if (i < 0) return;
-  const [closed] = app.panes.splice(i, 1);
+  if (allPanes().length <= 1) return;
+  const col = app.columns.find((c) => c.panes.some((p) => p.id === paneId));
+  if (!col) return;
+  const i = col.panes.findIndex((p) => p.id === paneId);
+  const [closed] = col.panes.splice(i, 1);
   for (const t of closed.tabs) {
     if (t.termId !== undefined) disposeTerminal(t.termId);
   }
-  if (app.activePaneId === paneId) app.activePaneId = app.panes[Math.max(0, i - 1)].id;
+  if (col.panes.length === 0) {
+    const ci = app.columns.indexOf(col);
+    app.columns.splice(ci, 1);
+    if (app.columns.length === 1) app.columns[0].size = 1;
+    if (app.activePaneId === paneId) {
+      const near = app.columns[Math.max(0, ci - 1)];
+      app.activePaneId = near.panes[near.panes.length - 1].id;
+    }
+  } else if (app.activePaneId === paneId) {
+    app.activePaneId = col.panes[Math.max(0, i - 1)].id;
+  }
 }
 
 export async function saveTab(tab: Tab) {
@@ -292,7 +342,7 @@ export async function createNewFolder(dir: string, relPath: string) {
 
 export async function deleteEntry(path: string, isDir: boolean) {
   await deletePath(path);
-  for (const pane of app.panes) {
+  for (const pane of allPanes()) {
     const doomed = pane.tabs.filter(
       (t) => t.path === path || (isDir && t.path.startsWith(path + "/")),
     );

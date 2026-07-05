@@ -1,8 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { EditorView, basicSetup } from "codemirror";
+  import { indentWithTab } from "@codemirror/commands";
   import { html } from "@codemirror/lang-html";
   import { markdown } from "@codemirror/lang-markdown";
+  import { indentUnit } from "@codemirror/language";
   import { Compartment } from "@codemirror/state";
   import { keymap } from "@codemirror/view";
   import { vscodeDark } from "@uiw/codemirror-theme-vscode";
@@ -27,9 +29,14 @@
               return true;
             },
           },
+          // Tab inserts/indents (Makefile recipes need real tabs); Esc then
+          // Tab still escapes focus via CodeMirror's default escape hatch
+          indentWithTab,
         ]),
         basicSetup,
-        tab.kind === "html" ? html() : markdown(),
+        tab.kind === "html" ? html() : tab.kind === "markdown" ? markdown() : [],
+        // real tabs in plain text files (Makefile recipes require them)
+        tab.kind === "text" ? indentUnit.of("\t") : [],
         wrapComp.of(wrap ? EditorView.lineWrapping : []),
         vscodeDark,
         EditorView.updateListener.of((u) => {
