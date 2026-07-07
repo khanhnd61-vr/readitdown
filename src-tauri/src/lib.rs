@@ -142,6 +142,155 @@ fn initial_root() -> Option<String> {
     INITIAL_ROOT.get().cloned().flatten()
 }
 
+// Extensions worth grepping for the cross-file search (Ctrl+Shift+F). Mirrors
+// the text/markdown/html kinds the editor opens; everything else (images, pdf,
+// binaries) is skipped so the walk stays fast.
+const SEARCHABLE_EXT: &[&str] = &[
+    "md", "markdown", "mdown", "txt", "html", "htm", "tex", "bib", "py", "c", "h", "cpp", "hpp",
+    "cc", "hh", "cxx", "cu", "cuh", "sh", "bash", "zsh", "js", "mjs", "ts", "json", "yaml", "yml",
+    "toml", "xml", "css", "rs", "go", "java", "rb", "lua", "sql", "ini", "cfg", "conf", "log",
+    "csv", "cmake", "mk", "patch", "diff",
+];
+const SEARCHABLE_NAMES: &[&str] = &["makefile", "gnumakefile", "dockerfile"];
+
+const MAX_SEARCH_MATCHES: usize = 5000;
+const MAX_SEARCH_FILE_BYTES: u64 = 2 * 1024 * 1024;
+const MAX_PREVIEW_CHARS: usize = 400;
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchMatch {
+    line: usize,   // 1-based line number
+    col: usize,    // UTF-16 offset of the match within the line (JS/CodeMirror units)
+    length: usize, // UTF-16 length of the match
+    preview: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileMatches {
+    path: String,
+    matches: Vec<SearchMatch>,
+}
+
+fn is_searchable(path: &Path) -> bool {
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        if SEARCHABLE_EXT.contains(&ext.to_lowercase().as_str()) {
+            return true;
+        }
+    }
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .map(|n| SEARCHABLE_NAMES.contains(&n.to_lowercase().as_str()))
+        .unwrap_or(false)
+}
+
+fn search_file(path: &Path, re: &regex::Regex, out: &mut Vec<FileMatches>, total: &mut usize) {
+    let meta = match fs::metadata(path) {
+        Ok(m) => m,
+        Err(_) => return,
+    };
+    if meta.len() > MAX_SEARCH_FILE_BYTES {
+        return;
+    }
+    // Non-UTF-8 (binary) files just fail to read and are skipped.
+    let content = match fs::read_to_string(path) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+    let mut matches = Vec::new();
+    for (i, line) in content.lines().enumerate() {
+        for m in re.find_iter(line) {
+            matches.push(SearchMatch {
+                line: i + 1,
+                col: line[..m.start()].encode_utf16().count(),
+                length: m.as_str().encode_utf16().count(),
+                preview: line.chars().take(MAX_PREVIEW_CHARS).collect(),
+            });
+            *total += 1;
+            if *total >= MAX_SEARCH_MATCHES {
+                break;
+            }
+        }
+        if *total >= MAX_SEARCH_MATCHES {
+            break;
+        }
+    }
+    if !matches.is_empty() {
+        out.push(FileMatches {
+            path: to_ui_path(path),
+            matches,
+        });
+    }
+}
+
+fn walk_search(dir: &Path, re: &regex::Regex, out: &mut Vec<FileMatches>, total: &mut usize) {
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.filter_map(|e| e.ok()) {
+        if *total >= MAX_SEARCH_MATCHES {
+            return;
+        }
+        let name = entry.file_name();
+        if name.to_string_lossy().starts_with('.') {
+            continue;
+        }
+        // Don't follow symlinks: avoids directory cycles hanging the walk.
+        let ft = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(_) => continue,
+        };
+        if ft.is_symlink() {
+            continue;
+        }
+        let path = entry.path();
+        if ft.is_dir() {
+            walk_search(&path, re, out, total);
+        } else if is_searchable(&path) {
+            search_file(&path, re, out, total);
+        }
+    }
+}
+
+#[tauri::command]
+fn search_in_files(
+    roots: Vec<String>,
+    query: String,
+    case_sensitive: bool,
+    whole_word: bool,
+    use_regex: bool,
+) -> Result<Vec<FileMatches>, String> {
+    if query.is_empty() {
+        return Ok(Vec::new());
+    }
+    let base = if use_regex {
+        query.clone()
+    } else {
+        regex::escape(&query)
+    };
+    let pattern = if whole_word {
+        format!(r"\b(?:{})\b", base)
+    } else {
+        base
+    };
+    let re = regex::RegexBuilder::new(&pattern)
+        .case_insensitive(!case_sensitive)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let mut out = Vec::new();
+    let mut total = 0usize;
+    for root in &roots {
+        if total >= MAX_SEARCH_MATCHES {
+            break;
+        }
+        walk_search(Path::new(root), &re, &mut out, &mut total);
+    }
+    Ok(out)
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Prefs {
@@ -226,6 +375,7 @@ pub fn run() {
             create_dir,
             delete_path,
             move_path,
+            search_in_files,
             initial_root,
             load_prefs,
             save_prefs,

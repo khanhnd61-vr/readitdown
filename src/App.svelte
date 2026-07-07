@@ -4,8 +4,17 @@
   import { initialRoot } from "./lib/api";
   import { basename, toUiPath } from "./lib/paths";
   import { initPrefs, prefs } from "./lib/prefs.svelte";
-  import { addRoot, app, openTerminal, type Column } from "./lib/state.svelte";
+  import {
+    activePane,
+    addRoot,
+    app,
+    openTerminal,
+    splitPane,
+    splitPaneDown,
+    type Column,
+  } from "./lib/state.svelte";
   import PaneView from "./components/PaneView.svelte";
+  import SearchPanel from "./components/SearchPanel.svelte";
   import Sidebar from "./components/Sidebar.svelte";
 
   const recentsToShow = $derived(prefs.recents.filter((p) => !prefs.favorites.includes(p)));
@@ -70,13 +79,44 @@
   }
 
   function onKeydown(e: KeyboardEvent) {
-    if ((e.ctrlKey || e.metaKey) && e.key === "b") {
+    const mod = e.ctrlKey || e.metaKey;
+    const inTerminal = !!(e.target as HTMLElement)?.closest?.(".terminal-view");
+    if (mod && e.key === "b") {
       e.preventDefault();
       app.sidebarVisible = !app.sidebarVisible;
     }
     if (e.ctrlKey && e.key === "`" && app.sections.length > 0) {
       e.preventDefault();
       openTerminal();
+    }
+    // Editor shortcuts (skip terminals, where Ctrl+E/Ctrl+\ belong to the shell).
+    if (mod && !inTerminal && app.sections.length > 0) {
+      // Ctrl+E: toggle edit / preview on a markdown or html tab.
+      if (!e.shiftKey && e.key.toLowerCase() === "e") {
+        const pane = activePane();
+        const tab = pane.tabs.find((t) => t.id === pane.activeTabId);
+        if (tab && (tab.kind === "markdown" || tab.kind === "html")) {
+          e.preventDefault();
+          tab.editing = !tab.editing;
+        }
+      }
+      // Ctrl+\ splits right, Ctrl+Shift+\ splits down (layout-independent code).
+      if (e.code === "Backslash") {
+        e.preventDefault();
+        if (e.shiftKey) splitPaneDown();
+        else splitPane();
+      }
+      // Ctrl+Shift+F cross-file search, Ctrl+Shift+E back to the explorer.
+      if (e.shiftKey && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        app.sidebarVisible = true;
+        app.sidebarView = "search";
+      }
+      if (e.shiftKey && e.key.toLowerCase() === "e") {
+        e.preventDefault();
+        app.sidebarVisible = true;
+        app.sidebarView = "files";
+      }
     }
     // a webview reload wipes the whole session (tabs, panes, terminals);
     // swallow the browser reload shortcuts, but keep Ctrl+R in terminals
@@ -127,12 +167,22 @@
 {:else}
   <div class="layout">
     {#if app.sidebarVisible}
-      <Sidebar {openFolder} />
+      {#if app.sidebarView === "search"}
+        <SearchPanel />
+      {:else}
+        <Sidebar {openFolder} />
+      {/if}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div class="divider" onpointerdown={startSidebarDrag}></div>
     {:else}
       <div class="rail">
         <button title="Show sidebar (Ctrl+B)" onclick={() => (app.sidebarVisible = true)}>&#9776;</button>
+        <button title="Search across files (Ctrl+Shift+F)" onclick={() => { app.sidebarVisible = true; app.sidebarView = "search"; }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </button>
       </div>
     {/if}
     <main class="panes">

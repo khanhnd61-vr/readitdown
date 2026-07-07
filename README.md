@@ -11,12 +11,7 @@ Lazy web-based viewer is also available.
 - Multi-folder explorer
 - Integrated terminal
 - PDF/HTML/Image viewer
-- Text editor with VS Code-style editing:
-  - **Ctrl + mouse wheel** zooms the editor font (persisted across launches);
-    **Ctrl+0** resets it
-  - **Ctrl+F** find, **Ctrl+H** find & replace — case-sensitive, whole-word,
-    regexp, replace one / replace all
-- Drag files and folders in the sidebar to move them (no terminal needed)
+- Text editor
 
 ## Prerequisites
 

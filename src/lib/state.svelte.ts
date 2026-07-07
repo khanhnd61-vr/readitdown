@@ -17,6 +17,9 @@ export interface Tab {
   fileVersion: number;
   termId?: number;
   editSplit?: number;
+  // a pending "jump to this match" from cross-file search; the editor consumes
+  // it (selects + scrolls) then clears it
+  reveal?: { line: number; col: number; length: number };
 }
 
 export interface Pane {
@@ -74,6 +77,8 @@ export const app = $state({
   treeVersion: 0,
   sidebarVisible: true,
   sidebarWidth: 240,
+  // which panel fills the sidebar: the file explorer or cross-file search
+  sidebarView: "files" as "files" | "search",
 });
 
 export function allRoots(): string[] {
@@ -191,6 +196,20 @@ export async function openFile(path: string, paneId?: number) {
   };
   pane.tabs.push(tab);
   pane.activeTabId = tab.id;
+}
+
+// Open a file from a cross-file search hit and jump to the match. Markdown/html
+// flip into edit mode so the CodeMirror editor (which does the reveal) is shown.
+export async function openFileAt(
+  path: string,
+  sel: { line: number; col: number; length: number },
+) {
+  await openFile(path);
+  const pane = activePane();
+  const tab = pane.tabs.find((t) => t.path === path);
+  if (!tab) return;
+  if (tab.kind === "markdown" || tab.kind === "html") tab.editing = true;
+  tab.reveal = { ...sel };
 }
 
 // Re-read the file from disk (another process may have changed it). Text tabs

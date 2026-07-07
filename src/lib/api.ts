@@ -28,6 +28,35 @@ export const movePath = (src: string, destDir: string) =>
 
 export const initialRoot = () => invoke<string | null>("initial_root");
 
+export interface SearchMatch {
+  line: number; // 1-based
+  col: number; // UTF-16 offset within the line (CodeMirror units)
+  length: number;
+  preview: string;
+}
+
+export interface FileMatches {
+  path: string;
+  matches: SearchMatch[];
+}
+
+export interface SearchOptions {
+  caseSensitive: boolean;
+  wholeWord: boolean;
+  regex: boolean;
+}
+
+// Grep the given root folders on disk (Ctrl+Shift+F). Returns matches grouped
+// by file; capped backend-side so huge trees stay responsive.
+export const searchInFiles = (roots: string[], query: string, opts: SearchOptions) =>
+  invoke<FileMatches[]>("search_in_files", {
+    roots,
+    query,
+    caseSensitive: opts.caseSensitive,
+    wholeWord: opts.wholeWord,
+    useRegex: opts.regex,
+  });
+
 export interface Prefs {
   favorites: string[];
   recents: string[];

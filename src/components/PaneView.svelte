@@ -86,7 +86,7 @@
       {/if}
       {#if activeTab?.kind === "markdown" || activeTab?.kind === "html"}
         <button
-          title="Edit (side by side preview)"
+          title="Edit / preview side by side (Ctrl+E)"
           class:active={activeTab.editing}
           onclick={() => activeTab && (activeTab.editing = !activeTab.editing)}
         >
@@ -113,13 +113,13 @@
           <path d="M3 19h5" />
         </svg>
       </button>
-      <button title="Split right" onclick={splitPane}>
+      <button title="Split right (Ctrl+\)" onclick={splitPane}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="16" rx="1" />
           <line x1="12" y1="4" x2="12" y2="20" />
         </svg>
       </button>
-      <button title="Split down" onclick={splitPaneDown}>
+      <button title="Split down (Ctrl+Shift+\)" onclick={splitPaneDown}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="16" rx="1" />
           <line x1="3" y1="12" x2="21" y2="12" />

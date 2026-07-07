@@ -95,11 +95,33 @@
   // External file change refreshed tab.content (file watcher) -> sync the
   // editor. No-op right after typing since the update listener just set
   // tab.content to the current doc.
+  //
+  // Skip while an IME composition is in flight: this effect is batched, so it
+  // can run a frame after the update listener wrote tab.content, by which point
+  // the doc has moved on — re-dispatching the whole document then aborts the
+  // composition, so accented/Telex/CJK input only landed on space or arrow.
   $effect(() => {
     const text = tab.content;
-    if (view && text !== view.state.doc.toString()) {
+    if (view && !view.composing && text !== view.state.doc.toString()) {
       view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
     }
+  });
+
+  // A cross-file search hit asked us to jump to a match: select it and scroll
+  // it into view, then clear the request so it fires once.
+  $effect(() => {
+    const r = tab.reveal;
+    if (!view || !r) return;
+    const doc = view.state.doc;
+    const line = doc.line(Math.min(Math.max(1, r.line), doc.lines));
+    const from = Math.min(line.from + r.col, line.to);
+    const to = Math.min(from + r.length, line.to);
+    view.dispatch({
+      selection: { anchor: from, head: to },
+      effects: EditorView.scrollIntoView(from, { y: "center" }),
+    });
+    view.focus();
+    tab.reveal = undefined;
   });
 </script>
 
