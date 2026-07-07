@@ -1,4 +1,4 @@
-import { createDir, createFile, deletePath, readTextFile, writeTextFile } from "./api";
+import { createDir, createFile, deletePath, movePath, readTextFile, writeTextFile } from "./api";
 import { basename, extname } from "./paths";
 import { addRecent } from "./prefs.svelte";
 import { createTerminal, disposeTerminal, setTermExitHandler } from "./terminals";
@@ -338,6 +338,27 @@ export async function createNewFile(dir: string, relPath: string) {
 export async function createNewFolder(dir: string, relPath: string) {
   await createDir(dir, relPath);
   app.treeVersion++;
+}
+
+// Move a file/folder into destDir (sidebar drag-and-drop). Rewrites the path of
+// every open tab that pointed at the moved item or lived inside a moved folder,
+// so those tabs keep saving to the right place. Returns the new path.
+export async function moveEntry(src: string, destDir: string): Promise<string> {
+  const dest = await movePath(src, destDir);
+  if (dest !== src) {
+    for (const pane of allPanes()) {
+      for (const tab of pane.tabs) {
+        if (!tab.path) continue;
+        if (tab.path === src) {
+          tab.path = dest;
+        } else if (tab.path.startsWith(src + "/")) {
+          tab.path = dest + tab.path.slice(src.length);
+        }
+      }
+    }
+  }
+  app.treeVersion++;
+  return dest;
 }
 
 export async function deleteEntry(path: string, isDir: boolean) {

@@ -5,9 +5,11 @@
   import { html } from "@codemirror/lang-html";
   import { markdown } from "@codemirror/lang-markdown";
   import { indentUnit } from "@codemirror/language";
+  import { search, searchKeymap, openSearchPanel } from "@codemirror/search";
   import { Compartment } from "@codemirror/state";
   import { keymap } from "@codemirror/view";
   import { vscodeDark } from "@uiw/codemirror-theme-vscode";
+  import { prefs, resetEditorFontSize, setEditorFontSize } from "../lib/prefs.svelte";
   import type { Tab } from "../lib/state.svelte";
 
   let { tab, wrap, onsave }: { tab: Tab; wrap: boolean; onsave: () => void } = $props();
@@ -15,6 +17,15 @@
   let el: HTMLElement;
   let view: EditorView | undefined;
   const wrapComp = new Compartment();
+
+  // Ctrl + mouse wheel zooms the editor text, like VS Code. The font size lives
+  // in prefs (shared by every editor, persisted); the container carries it as a
+  // CSS var that .cm-editor reads, so the change applies without reconfiguring.
+  function onWheel(e: WheelEvent) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    setEditorFontSize(prefs.editorFontSize - Math.sign(e.deltaY));
+  }
 
   onMount(() => {
     view = new EditorView({
@@ -29,11 +40,35 @@
               return true;
             },
           },
+          // Ctrl+H (VS Code's find-and-replace): CodeMirror's search panel
+          // already carries the replace row, so we just open it. Ctrl+F and the
+          // rest of the search shortcuts come from searchKeymap below.
+          {
+            key: "Mod-h",
+            run: (v) => {
+              openSearchPanel(v);
+              return true;
+            },
+          },
+          // Ctrl+0 resets the zoom, matching the Ctrl+wheel gesture.
+          {
+            key: "Mod-0",
+            run: () => {
+              resetEditorFontSize();
+              return true;
+            },
+          },
+          ...searchKeymap,
           // Tab inserts/indents (Makefile recipes need real tabs); Esc then
           // Tab still escapes focus via CodeMirror's default escape hatch
           indentWithTab,
         ]),
         basicSetup,
+        // Find/replace: Ctrl+F opens the panel (case-sensitive, whole-word and
+        // regexp toggles, replace one / replace all all live in it). basicSetup
+        // already carries searchKeymap + match highlighting; search() adds the
+        // panel itself, anchored at the top like VS Code.
+        search({ top: true }),
         tab.kind === "html" ? html() : tab.kind === "markdown" ? markdown() : [],
         // real tabs in plain text files (Makefile recipes require them)
         tab.kind === "text" ? indentUnit.of("\t") : [],
@@ -44,7 +79,13 @@
         }),
       ],
     });
-    return () => view?.destroy();
+    // Non-passive so the ctrl+wheel zoom can preventDefault the browser's own
+    // page zoom; Svelte marks its onwheel handlers passive.
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      view?.destroy();
+    };
   });
 
   $effect(() => {
@@ -62,4 +103,4 @@
   });
 </script>
 
-<div class="editor" bind:this={el}></div>
+<div class="editor" bind:this={el} style="--editor-font-size: {prefs.editorFontSize}px"></div>
