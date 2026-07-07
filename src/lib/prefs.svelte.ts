@@ -2,9 +2,14 @@ import { loadPrefs, savePrefs } from "./api";
 
 const MAX_RECENTS = 8;
 
+export const DEFAULT_FONT_SIZE = 13;
+export const MIN_FONT_SIZE = 6;
+export const MAX_FONT_SIZE = 48;
+
 export const prefs = $state({
   favorites: [] as string[],
   recents: [] as string[],
+  editorFontSize: DEFAULT_FONT_SIZE,
 });
 
 export async function initPrefs() {
@@ -12,9 +17,29 @@ export async function initPrefs() {
     const p = await loadPrefs();
     prefs.favorites = p.favorites;
     prefs.recents = p.recents;
+    if (typeof p.editorFontSize === "number" && p.editorFontSize > 0) {
+      prefs.editorFontSize = clampFontSize(p.editorFontSize);
+    }
   } catch (e) {
     console.error("load prefs failed:", e);
   }
+}
+
+function clampFontSize(px: number): number {
+  return Math.round(Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, px)));
+}
+
+// Ctrl+Wheel zoom and any other caller nudges the shared editor font size; all
+// open editors react to the change and it's persisted for next launch.
+export function setEditorFontSize(px: number) {
+  const next = clampFontSize(px);
+  if (next === prefs.editorFontSize) return;
+  prefs.editorFontSize = next;
+  persist();
+}
+
+export function resetEditorFontSize() {
+  setEditorFontSize(DEFAULT_FONT_SIZE);
 }
 
 function persist() {

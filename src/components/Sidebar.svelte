@@ -8,6 +8,7 @@
     createNewFile,
     createNewFolder,
     deleteEntry,
+    moveEntry,
     reloadTab,
     tabsUnderRoots,
     type SidebarSection,
@@ -92,6 +93,24 @@
       if (didExpand && creating?.base) creating.base.expanded = false;
       error = String(e);
     }
+  }
+
+  // Drag-and-drop move. Errors (name clash, folder-into-itself) surface as a
+  // dialog instead of failing silently.
+  async function handleMove(src: string, destDir: string) {
+    try {
+      await moveEntry(src, destDir);
+    } catch (e) {
+      await message(String(e), { title: "Move failed", kind: "error" });
+    }
+  }
+
+  // Dropping onto the empty area of a folder's tree moves the item to that
+  // folder's top level.
+  function onRootDrop(e: DragEvent, root: string) {
+    e.preventDefault();
+    const src = e.dataTransfer?.getData("text/plain");
+    if (src) handleMove(src, root);
   }
 
   function onTreeContext(e: MouseEvent, node: Node) {
@@ -242,9 +261,14 @@
           {#if error}<div class="error">{error}</div>{/if}
         </div>
       {/if}
-      <div class="tree">
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="tree"
+        ondragover={(e) => e.preventDefault()}
+        ondrop={(e) => onRootDrop(e, section.activeRoot)}
+      >
         {#each trees[section.activeRoot] ?? [] as node (node.path)}
-          <TreeNode {node} oncontext={onTreeContext} />
+          <TreeNode {node} oncontext={onTreeContext} onmove={handleMove} />
         {/each}
       </div>
     </div>

@@ -106,17 +106,65 @@ fn delete_path(path: String) -> Result<(), String> {
     }
 }
 
+/// Move `src` into the directory `dest_dir`, keeping its file name. Backs the
+/// sidebar drag-and-drop so files can be reorganized without a terminal.
+#[tauri::command]
+fn move_path(src: String, dest_dir: String) -> Result<String, String> {
+    let src_path = Path::new(&src);
+    let name = src_path
+        .file_name()
+        .ok_or_else(|| "invalid source".to_string())?;
+    let dest_dir_path = Path::new(&dest_dir);
+    if !dest_dir_path.is_dir() {
+        return Err("destination is not a folder".into());
+    }
+    let dest = dest_dir_path.join(name);
+    // No-op drop onto the folder the item already lives in.
+    if dest.as_path() == src_path {
+        return Ok(to_ui_path(src_path));
+    }
+    // Refuse to drop a folder into itself or one of its own descendants, which
+    // would either fail cryptically or orphan the subtree.
+    let src_abs = fs::canonicalize(src_path).map_err(|e| e.to_string())?;
+    let dest_dir_abs = fs::canonicalize(dest_dir_path).map_err(|e| e.to_string())?;
+    if dest_dir_abs == src_abs || dest_dir_abs.starts_with(&src_abs) {
+        return Err("cannot move a folder into itself".into());
+    }
+    if dest.exists() {
+        return Err(format!("\"{}\" already exists here", name.to_string_lossy()));
+    }
+    fs::rename(src_path, &dest).map_err(|e| e.to_string())?;
+    Ok(to_ui_path(&dest))
+}
+
 #[tauri::command]
 fn initial_root() -> Option<String> {
     INITIAL_ROOT.get().cloned().flatten()
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Prefs {
     #[serde(default)]
     favorites: Vec<String>,
     #[serde(default)]
     recents: Vec<String>,
+    #[serde(default = "default_font_size")]
+    editor_font_size: u32,
+}
+
+fn default_font_size() -> u32 {
+    13
+}
+
+impl Default for Prefs {
+    fn default() -> Self {
+        Prefs {
+            favorites: Vec::new(),
+            recents: Vec::new(),
+            editor_font_size: default_font_size(),
+        }
+    }
 }
 
 fn prefs_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
@@ -177,6 +225,7 @@ pub fn run() {
             create_file,
             create_dir,
             delete_path,
+            move_path,
             initial_root,
             load_prefs,
             save_prefs,

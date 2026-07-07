@@ -21,11 +21,17 @@ export const createDir = (dir: string, relPath: string) =>
 
 export const deletePath = (path: string) => invoke<void>("delete_path", { path });
 
+// Move (rename) a file or folder into destDir, keeping its basename. Returns the
+// new forward-slash path.
+export const movePath = (src: string, destDir: string) =>
+  invoke<string>("move_path", { src, destDir });
+
 export const initialRoot = () => invoke<string | null>("initial_root");
 
 export interface Prefs {
   favorites: string[];
   recents: string[];
+  editorFontSize?: number;
 }
 
 export const loadPrefs = () => invoke<Prefs>("load_prefs");
