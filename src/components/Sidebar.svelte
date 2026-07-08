@@ -33,9 +33,14 @@
 
   $effect(() => {
     void app.treeVersion;
+    const showHidden = app.showHidden;
     for (const s of app.sections) {
       const root = s.activeRoot;
-      loadChildren(root, untrack(() => trees[root] ?? null)).then((n) => (trees[root] = n));
+      loadChildren(
+        root,
+        untrack(() => trees[root] ?? null),
+        showHidden,
+      ).then((n) => (trees[root] = n));
     }
   });
 
@@ -261,6 +266,16 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="23 4 23 10 17 10" />
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
+        </button>
+        <button
+          title={app.showHidden ? "Hide hidden files" : "Show hidden files"}
+          class:active={app.showHidden}
+          onclick={() => (app.showHidden = !app.showHidden)}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
           </svg>
         </button>
         <button title="Open folder in this view" onclick={() => openFolder(section.id)}>&#8943;</button>

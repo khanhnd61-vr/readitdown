@@ -88,6 +88,7 @@ export const app = $state({
   treeVersion: 0,
   sidebarVisible: true,
   sidebarWidth: 240,
+  showHidden: false,
   // which panel fills the sidebar: the file explorer or cross-file search
   sidebarView: "files" as "files" | "search",
 });
@@ -284,6 +285,35 @@ export function closeTab(pane: Pane, tabId: number) {
   }
   if (pane.activeTabId === tabId) {
     pane.activeTabId = pane.tabs[Math.min(i, pane.tabs.length - 1)]?.id ?? null;
+  }
+}
+
+// Move a tab into another pane at the given position (tab drag-and-drop), or
+// reorder within its own pane. A dragged preview tab gets pinned.
+export function moveTab(fromPaneId: number, tabId: number, toPaneId: number, index: number) {
+  const from = allPanes().find((p) => p.id === fromPaneId);
+  const to = allPanes().find((p) => p.id === toPaneId);
+  if (!from || !to) return;
+  const i = from.tabs.findIndex((t) => t.id === tabId);
+  if (i < 0) return;
+  const tab = from.tabs[i];
+  // The target pane already shows this file: focus that tab instead of moving,
+  // so neither buffer's unsaved edits can be lost.
+  const existing = from !== to && tab.path ? to.tabs.find((t) => t.path === tab.path) : undefined;
+  if (existing) {
+    to.activeTabId = existing.id;
+    app.activePaneId = to.id;
+    return;
+  }
+  from.tabs.splice(i, 1);
+  if (from === to && i < index) index--;
+  index = Math.max(0, Math.min(index, to.tabs.length));
+  to.tabs.splice(index, 0, tab);
+  pinTab(tab);
+  to.activeTabId = tab.id;
+  app.activePaneId = to.id;
+  if (from !== to && from.activeTabId === tabId) {
+    from.activeTabId = from.tabs[Math.min(i, from.tabs.length - 1)]?.id ?? null;
   }
 }
 

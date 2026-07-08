@@ -3,7 +3,7 @@
   import { listDir } from "../lib/api";
   import { dirname } from "../lib/paths";
   import { toNode, type Node } from "../lib/tree";
-  import { fileKind, openFile } from "../lib/state.svelte";
+  import { app, fileKind, openFile } from "../lib/state.svelte";
 
   let {
     node,
@@ -33,7 +33,7 @@
   async function expand() {
     node.expanded = !node.expanded;
     if (node.expanded && node.children === null) {
-      node.children = (await listDir(node.path)).map(toNode);
+      node.children = (await listDir(node.path, app.showHidden)).map(toNode);
     }
   }
 

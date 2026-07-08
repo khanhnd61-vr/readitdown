@@ -6,6 +6,7 @@
     app,
     closePane,
     closeTab,
+    moveTab,
     openTerminal,
     pinTab,
     reloadTab,
@@ -40,6 +41,49 @@
     reloadTab(t);
   }
 
+  // Tab drag-and-drop between panes. A custom drag type keeps these drags
+  // apart from the sidebar's file drags, which use text/plain paths.
+  const TAB_DRAG = "application/x-readitdown-tab";
+
+  let dragOver = $state(false);
+
+  function onTabDragStart(e: DragEvent, t: Tab) {
+    e.dataTransfer?.setData(TAB_DRAG, JSON.stringify({ paneId: pane.id, tabId: t.id }));
+    if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
+  }
+
+  function onTabsDragOver(e: DragEvent) {
+    if (!e.dataTransfer?.types.includes(TAB_DRAG)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    dragOver = true;
+  }
+
+  function onTabsDragLeave(e: DragEvent) {
+    if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null)) {
+      dragOver = false;
+    }
+  }
+
+  // Insert before the first tab whose midpoint is right of the drop point.
+  function dropIndex(e: DragEvent): number {
+    const els = Array.from((e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>(".tab"));
+    const i = els.findIndex((el) => {
+      const r = el.getBoundingClientRect();
+      return e.clientX < r.left + r.width / 2;
+    });
+    return i < 0 ? els.length : i;
+  }
+
+  function onTabsDrop(e: DragEvent) {
+    dragOver = false;
+    const data = e.dataTransfer?.getData(TAB_DRAG);
+    if (!data) return;
+    e.preventDefault();
+    const { paneId, tabId } = JSON.parse(data);
+    moveTab(paneId, tabId, pane.id, dropIndex(e));
+  }
+
   function startEditDrag(e: PointerEvent, tab: Tab) {
     e.preventDefault();
     const rect = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();
@@ -64,13 +108,22 @@
   onpointerdown={() => (app.activePaneId = pane.id)}
 >
   <div class="tabbar">
-    <div class="tabs">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="tabs"
+      class:drag-over={dragOver}
+      ondragover={onTabsDragOver}
+      ondragleave={onTabsDragLeave}
+      ondrop={onTabsDrop}
+    >
       {#each pane.tabs as t (t.id)}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
         <div
           class="tab"
           class:active={t.id === pane.activeTabId}
           class:preview={t.preview}
+          draggable="true"
+          ondragstart={(e) => onTabDragStart(e, t)}
           onclick={() => (pane.activeTabId = t.id)}
           ondblclick={() => pinTab(t)}
           title={t.preview ? "Preview — double-click to keep open" : t.title}

@@ -6,7 +6,8 @@ export interface Entry {
   isDir: boolean;
 }
 
-export const listDir = (path: string) => invoke<Entry[]>("list_dir", { path });
+export const listDir = (path: string, showHidden = false) =>
+  invoke<Entry[]>("list_dir", { path, showHidden });
 
 export const readTextFile = (path: string) => invoke<string>("read_text_file", { path });
 

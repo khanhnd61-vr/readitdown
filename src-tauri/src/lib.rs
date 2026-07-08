@@ -28,13 +28,13 @@ pub struct Entry {
 }
 
 #[tauri::command]
-fn list_dir(path: String) -> Result<Vec<Entry>, String> {
+fn list_dir(path: String, show_hidden: bool) -> Result<Vec<Entry>, String> {
     let mut entries: Vec<Entry> = fs::read_dir(&path)
         .map_err(|e| e.to_string())?
         .filter_map(|e| e.ok())
         .filter_map(|e| {
             let name = e.file_name().to_string_lossy().to_string();
-            if name.starts_with('.') {
+            if !show_hidden && name.starts_with('.') {
                 return None;
             }
             let is_dir = e.file_type().ok()?.is_dir();
