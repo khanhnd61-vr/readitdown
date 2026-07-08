@@ -1,12 +1,27 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { renderMarkdown } from "../lib/markdown";
+  import { prefs, setPreviewFontSize } from "../lib/prefs.svelte";
   import { openFile, rootFor, type Tab } from "../lib/state.svelte";
   import HtmlView from "./HtmlView.svelte";
 
   let { tab, paneId, wrap }: { tab: Tab; paneId: number; wrap: boolean } = $props();
 
   let container: HTMLElement | undefined = $state();
+
+  // Ctrl + mouse wheel zooms the rendered preview, matching the raw editor.
+  function onWheel(e: WheelEvent) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    setPreviewFontSize(prefs.previewFontSize - Math.sign(e.deltaY));
+  }
+
+  onMount(() => {
+    // Non-passive so ctrl+wheel can preventDefault the webview's page zoom.
+    container?.addEventListener("wheel", onWheel, { passive: false });
+    return () => container?.removeEventListener("wheel", onWheel);
+  });
   const html = $derived(
     tab.kind === "markdown" ? renderMarkdown(tab.content, tab.path, rootFor(tab.path)) : "",
   );
@@ -41,6 +56,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div
     class="content {wrap ? 'wrap' : 'nowrap'}"
+    style="--preview-font-size: {prefs.previewFontSize}px"
     bind:this={container}
     onclick={handleLink}
     onauxclick={onMiddle}

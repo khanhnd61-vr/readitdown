@@ -137,6 +137,27 @@ fn move_path(src: String, dest_dir: String) -> Result<String, String> {
     Ok(to_ui_path(&dest))
 }
 
+/// Rename a file or folder in place, keeping it in the same parent directory.
+/// `new_name` is a bare name (no path separators). Returns the new UI path.
+#[tauri::command]
+fn rename_path(path: String, new_name: String) -> Result<String, String> {
+    let name = new_name.trim();
+    if name.is_empty() || name.contains('/') || name.contains('\\') || name == "." || name == ".." {
+        return Err("invalid name".into());
+    }
+    let src = Path::new(&path);
+    let parent = src.parent().ok_or_else(|| "invalid path".to_string())?;
+    let dest = parent.join(name);
+    if dest == src {
+        return Ok(to_ui_path(src));
+    }
+    if dest.exists() {
+        return Err(format!("\"{}\" already exists", name));
+    }
+    fs::rename(src, &dest).map_err(|e| e.to_string())?;
+    Ok(to_ui_path(&dest))
+}
+
 #[tauri::command]
 fn initial_root() -> Option<String> {
     INITIAL_ROOT.get().cloned().flatten()
@@ -300,10 +321,16 @@ pub struct Prefs {
     recents: Vec<String>,
     #[serde(default = "default_font_size")]
     editor_font_size: u32,
+    #[serde(default = "default_preview_font_size")]
+    preview_font_size: u32,
 }
 
 fn default_font_size() -> u32 {
     13
+}
+
+fn default_preview_font_size() -> u32 {
+    14
 }
 
 impl Default for Prefs {
@@ -312,6 +339,7 @@ impl Default for Prefs {
             favorites: Vec::new(),
             recents: Vec::new(),
             editor_font_size: default_font_size(),
+            preview_font_size: default_preview_font_size(),
         }
     }
 }
@@ -375,6 +403,7 @@ pub fn run() {
             create_dir,
             delete_path,
             move_path,
+            rename_path,
             search_in_files,
             initial_root,
             load_prefs,

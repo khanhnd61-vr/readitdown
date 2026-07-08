@@ -9,6 +9,7 @@
     createNewFolder,
     deleteEntry,
     moveEntry,
+    renameEntry,
     reloadTab,
     tabsUnderRoots,
     type SidebarSection,
@@ -24,6 +25,7 @@
   let newName = $state("");
   let error = $state("");
   let menu: { x: number; y: number; node: Node } | null = $state(null);
+  let renamingPath: string | null = $state(null);
 
   const creatingSection = $derived(
     creating ? (app.sections.find((s) => s.id === creating!.sectionId) ?? null) : null,
@@ -111,6 +113,26 @@
     e.preventDefault();
     const src = e.dataTransfer?.getData("text/plain");
     if (src) handleMove(src, root);
+  }
+
+  // Rename (context menu / F2): show an inline input over the node's row.
+  function startRename(node: Node) {
+    menu = null;
+    creating = null;
+    renamingPath = node.path;
+  }
+
+  async function submitRename(node: Node, name: string) {
+    if (name === node.name) {
+      renamingPath = null;
+      return;
+    }
+    renamingPath = null;
+    try {
+      await renameEntry(node.path, name);
+    } catch (e) {
+      await message(String(e), { title: "Rename failed", kind: "error" });
+    }
   }
 
   function onTreeContext(e: MouseEvent, node: Node) {
@@ -268,7 +290,15 @@
         ondrop={(e) => onRootDrop(e, section.activeRoot)}
       >
         {#each trees[section.activeRoot] ?? [] as node (node.path)}
-          <TreeNode {node} oncontext={onTreeContext} onmove={handleMove} />
+          <TreeNode
+            {node}
+            oncontext={onTreeContext}
+            onmove={handleMove}
+            onrename={startRename}
+            {renamingPath}
+            onrenamesubmit={submitRename}
+            onrenamecancel={() => (renamingPath = null)}
+          />
         {/each}
       </div>
     </div>
@@ -290,8 +320,10 @@
       <button onclick={() => menu && startCreate("file", menu.node, sectionIdFor(menu.node))}>New File...</button>
       <button onclick={() => menu && startCreate("folder", menu.node, sectionIdFor(menu.node))}>New Folder...</button>
       <div class="ctx-sep"></div>
+      <button onclick={() => menu && startRename(menu.node)}>Rename...</button>
       <button onclick={del}>Delete Folder</button>
     {:else}
+      <button onclick={() => menu && startRename(menu.node)}>Rename...</button>
       <button onclick={del}>Delete File</button>
     {/if}
   </div>

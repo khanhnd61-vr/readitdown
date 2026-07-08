@@ -548,6 +548,26 @@ button.primary:hover {
   box-shadow: inset 0 0 0 1px var(--focus);
 }
 
+/* inline rename input (context menu / F2) */
+.tree-item.tree-rename {
+  padding-right: 6px;
+}
+
+.tree-item.tree-rename input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 1px 4px;
+  border: 1px solid var(--focus);
+  border-radius: 2px;
+  background: var(--bg-input);
+  color: var(--fg);
+}
+
+.tree-item.tree-rename input:focus {
+  outline: none;
+}
+
 /* panes */
 
 .panes {
@@ -620,6 +640,11 @@ button.primary:hover {
   color: var(--fg-bright);
 }
 
+/* VS Code-style preview tab: italic until pinned (double-click / edit) */
+.tab.preview .tab-title {
+  font-style: italic;
+}
+
 .tab-close {
   padding: 1px 4px;
   font-size: 11px;
@@ -677,8 +702,45 @@ button.primary:hover {
   /* match vscode markdown preview typography */
   font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", system-ui, Ubuntu,
     "Droid Sans", sans-serif;
-  font-size: 14px;
+  font-size: var(--preview-font-size, 14px);
   line-height: 1.6;
+}
+
+/* Color the structural parts of the rendered markdown so sections read apart. */
+.content .markdown-body h1,
+.content .markdown-body h2 {
+  color: #4fc1ff;
+}
+
+.content .markdown-body h3,
+.content .markdown-body h4 {
+  color: #9cdcfe;
+}
+
+.content .markdown-body h5,
+.content .markdown-body h6 {
+  color: #c586c0;
+}
+
+.content .markdown-body a {
+  color: #4ec9b0;
+}
+
+.content .markdown-body strong {
+  color: #e5c07b;
+}
+
+.content .markdown-body blockquote {
+  color: #a7c99a;
+  border-left-color: #6a9955;
+}
+
+.content .markdown-body :not(pre) > code {
+  color: #ce9178;
+}
+
+.content .markdown-body table th {
+  color: #9cdcfe;
 }
 
 .content .markdown-body code,

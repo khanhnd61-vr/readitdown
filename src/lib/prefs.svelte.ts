@@ -3,6 +3,7 @@ import { loadPrefs, savePrefs } from "./api";
 const MAX_RECENTS = 8;
 
 export const DEFAULT_FONT_SIZE = 13;
+export const DEFAULT_PREVIEW_FONT_SIZE = 14;
 export const MIN_FONT_SIZE = 6;
 export const MAX_FONT_SIZE = 48;
 
@@ -10,6 +11,7 @@ export const prefs = $state({
   favorites: [] as string[],
   recents: [] as string[],
   editorFontSize: DEFAULT_FONT_SIZE,
+  previewFontSize: DEFAULT_PREVIEW_FONT_SIZE,
 });
 
 export async function initPrefs() {
@@ -19,6 +21,9 @@ export async function initPrefs() {
     prefs.recents = p.recents;
     if (typeof p.editorFontSize === "number" && p.editorFontSize > 0) {
       prefs.editorFontSize = clampFontSize(p.editorFontSize);
+    }
+    if (typeof p.previewFontSize === "number" && p.previewFontSize > 0) {
+      prefs.previewFontSize = clampFontSize(p.previewFontSize);
     }
   } catch (e) {
     console.error("load prefs failed:", e);
@@ -40,6 +45,18 @@ export function setEditorFontSize(px: number) {
 
 export function resetEditorFontSize() {
   setEditorFontSize(DEFAULT_FONT_SIZE);
+}
+
+// Same idea for the rendered markdown preview (Ctrl+Wheel over the preview).
+export function setPreviewFontSize(px: number) {
+  const next = clampFontSize(px);
+  if (next === prefs.previewFontSize) return;
+  prefs.previewFontSize = next;
+  persist();
+}
+
+export function resetPreviewFontSize() {
+  setPreviewFontSize(DEFAULT_PREVIEW_FONT_SIZE);
 }
 
 function persist() {

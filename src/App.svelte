@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { open } from "@tauri-apps/plugin-dialog";
+  import { confirm, open } from "@tauri-apps/plugin-dialog";
   import { initialRoot } from "./lib/api";
   import { basename, toUiPath } from "./lib/paths";
   import { initPrefs, prefs } from "./lib/prefs.svelte";
@@ -8,7 +8,9 @@
     activePane,
     addRoot,
     app,
+    closeTab,
     openTerminal,
+    reopenClosedTab,
     splitPane,
     splitPaneDown,
     type Column,
@@ -46,6 +48,15 @@
     drag(e, (ev) => {
       app.sidebarWidth = Math.max(140, Math.min(600, startW + ev.clientX - startX));
     });
+  }
+
+  async function closeActiveTab() {
+    const pane = activePane();
+    const tab = pane.tabs.find((t) => t.id === pane.activeTabId);
+    if (!tab) return;
+    if (tab.content !== tab.savedContent && !(await confirm(`Close "${tab.title}" without saving?`)))
+      return;
+    closeTab(pane, tab.id);
   }
 
   function startColDrag(e: PointerEvent, i: number) {
@@ -105,6 +116,15 @@
         e.preventDefault();
         if (e.shiftKey) splitPaneDown();
         else splitPane();
+      }
+      // Ctrl+W closes the active tab; Ctrl+Shift+T reopens the last closed one.
+      if (!e.shiftKey && e.key.toLowerCase() === "w") {
+        e.preventDefault();
+        closeActiveTab();
+      }
+      if (e.shiftKey && e.key.toLowerCase() === "t") {
+        e.preventDefault();
+        reopenClosedTab();
       }
       // Ctrl+Shift+F cross-file search, Ctrl+Shift+E back to the explorer.
       if (e.shiftKey && e.key.toLowerCase() === "f") {

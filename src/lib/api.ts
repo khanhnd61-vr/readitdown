@@ -61,7 +61,12 @@ export interface Prefs {
   favorites: string[];
   recents: string[];
   editorFontSize?: number;
+  previewFontSize?: number;
 }
+
+// Rename a file/folder in place (same parent dir). Returns the new path.
+export const renamePath = (path: string, newName: string) =>
+  invoke<string>("rename_path", { path, newName });
 
 export const loadPrefs = () => invoke<Prefs>("load_prefs");
 

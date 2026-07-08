@@ -7,6 +7,7 @@
     closePane,
     closeTab,
     openTerminal,
+    pinTab,
     reloadTab,
     saveTab,
     splitPane,
@@ -66,7 +67,14 @@
     <div class="tabs">
       {#each pane.tabs as t (t.id)}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-        <div class="tab" class:active={t.id === pane.activeTabId} onclick={() => (pane.activeTabId = t.id)}>
+        <div
+          class="tab"
+          class:active={t.id === pane.activeTabId}
+          class:preview={t.preview}
+          onclick={() => (pane.activeTabId = t.id)}
+          ondblclick={() => pinTab(t)}
+          title={t.preview ? "Preview — double-click to keep open" : t.title}
+        >
           <span class="tab-title">{t.title}{isDirty(t) ? " •" : ""}</span>
           <button class="tab-close" onclick={(e) => onCloseTab(e, t)}>&#10005;</button>
         </div>
