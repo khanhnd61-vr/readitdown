@@ -4,13 +4,31 @@
   import { indentWithTab } from "@codemirror/commands";
   import { html } from "@codemirror/lang-html";
   import { markdown } from "@codemirror/lang-markdown";
-  import { indentUnit } from "@codemirror/language";
+  import { HighlightStyle, indentUnit, syntaxHighlighting } from "@codemirror/language";
   import { search, searchKeymap, openSearchPanel } from "@codemirror/search";
-  import { Compartment } from "@codemirror/state";
+  import { Compartment, Prec } from "@codemirror/state";
   import { keymap } from "@codemirror/view";
+  import { tags as t } from "@lezer/highlight";
   import { vscodeDark } from "@uiw/codemirror-theme-vscode";
   import { prefs, resetEditorFontSize, setEditorFontSize } from "../lib/prefs.svelte";
-  import type { Tab } from "../lib/state.svelte";
+  import { pinTab, type Tab } from "../lib/state.svelte";
+
+  // Distinct colors per markdown part so structure is readable at a glance.
+  // Only touches markdown tokens; other tags fall through to the base theme.
+  const mdHighlight = HighlightStyle.define([
+    { tag: t.heading1, color: "#4fc1ff", fontWeight: "bold" },
+    { tag: t.heading2, color: "#569cd6", fontWeight: "bold" },
+    { tag: [t.heading3, t.heading4, t.heading5, t.heading6], color: "#9cdcfe", fontWeight: "bold" },
+    { tag: t.strong, color: "#e5c07b", fontWeight: "bold" },
+    { tag: t.emphasis, color: "#c586c0", fontStyle: "italic" },
+    { tag: t.strikethrough, color: "#808080", textDecoration: "line-through" },
+    { tag: [t.link, t.url], color: "#4ec9b0", textDecoration: "underline" },
+    { tag: t.monospace, color: "#ce9178" },
+    { tag: t.quote, color: "#6a9955", fontStyle: "italic" },
+    { tag: t.list, color: "#569cd6" },
+    { tag: t.contentSeparator, color: "#569cd6" },
+    { tag: t.processingInstruction, color: "#808080" },
+  ]);
 
   let { tab, wrap, onsave }: { tab: Tab; wrap: boolean; onsave: () => void } = $props();
 
@@ -70,12 +88,18 @@
         // panel itself, anchored at the top like VS Code.
         search({ top: true }),
         tab.kind === "html" ? html() : tab.kind === "markdown" ? markdown() : [],
+        // richer markdown colors, winning over the base theme's syntax style
+        tab.kind === "markdown" ? Prec.highest(syntaxHighlighting(mdHighlight)) : [],
         // real tabs in plain text files (Makefile recipes require them)
         tab.kind === "text" ? indentUnit.of("\t") : [],
         wrapComp.of(wrap ? EditorView.lineWrapping : []),
         vscodeDark,
         EditorView.updateListener.of((u) => {
-          if (u.docChanged) tab.content = u.state.doc.toString();
+          if (u.docChanged) {
+            tab.content = u.state.doc.toString();
+            // typing into a preview tab keeps it open, like VS Code
+            pinTab(tab);
+          }
         }),
       ],
     });
@@ -95,11 +119,33 @@
   // External file change refreshed tab.content (file watcher) -> sync the
   // editor. No-op right after typing since the update listener just set
   // tab.content to the current doc.
+  //
+  // Skip while an IME composition is in flight: this effect is batched, so it
+  // can run a frame after the update listener wrote tab.content, by which point
+  // the doc has moved on — re-dispatching the whole document then aborts the
+  // composition, so accented/Telex/CJK input only landed on space or arrow.
   $effect(() => {
     const text = tab.content;
-    if (view && text !== view.state.doc.toString()) {
+    if (view && !view.composing && text !== view.state.doc.toString()) {
       view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
     }
+  });
+
+  // A cross-file search hit asked us to jump to a match: select it and scroll
+  // it into view, then clear the request so it fires once.
+  $effect(() => {
+    const r = tab.reveal;
+    if (!view || !r) return;
+    const doc = view.state.doc;
+    const line = doc.line(Math.min(Math.max(1, r.line), doc.lines));
+    const from = Math.min(line.from + r.col, line.to);
+    const to = Math.min(from + r.length, line.to);
+    view.dispatch({
+      selection: { anchor: from, head: to },
+      effects: EditorView.scrollIntoView(from, { y: "center" }),
+    });
+    view.focus();
+    tab.reveal = undefined;
   });
 </script>
 

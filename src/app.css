@@ -297,6 +297,164 @@ button.primary:hover {
   text-overflow: ellipsis;
 }
 
+/* cross-file search panel (Ctrl+Shift+F) */
+
+.search-box {
+  padding: 4px 8px 8px;
+}
+
+.search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg-input);
+}
+
+.search-field:focus-within {
+  border-color: var(--focus);
+}
+
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 4px 6px;
+  border: none;
+  background: transparent;
+  color: var(--fg);
+}
+
+.search-field input:focus {
+  outline: none;
+}
+
+.search-opts {
+  display: flex;
+  gap: 1px;
+  padding-right: 2px;
+}
+
+.search-opts button {
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 4px;
+  min-width: 20px;
+  border-radius: 3px;
+  color: var(--fg-muted);
+}
+
+.search-opts button:hover {
+  background: var(--btn-hover);
+  color: var(--fg);
+}
+
+.search-opts button.active {
+  background: color-mix(in srgb, var(--focus) 45%, transparent);
+  color: var(--fg-bright);
+}
+
+.search-status {
+  padding: 2px 12px 6px;
+  font-size: 11px;
+  color: var(--fg-muted);
+}
+
+.search-status.error {
+  color: var(--error);
+  white-space: pre-wrap;
+}
+
+.search-results {
+  flex: 1;
+  overflow: auto;
+  padding-bottom: 8px;
+}
+
+.result-file-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  padding: 2px 8px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.result-file-head:hover {
+  background: var(--bg-hover);
+}
+
+.result-file-head .chevron {
+  width: 12px;
+  flex: none;
+  font-size: 10px;
+  color: var(--fg-muted);
+}
+
+.result-file-name {
+  color: var(--fg);
+  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-file-dir {
+  flex: 1;
+  min-width: 0;
+  color: var(--fg-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-count {
+  flex: none;
+  color: var(--fg-muted);
+  font-size: 11px;
+  background: var(--bg-input);
+  border-radius: 9px;
+  padding: 0 6px;
+}
+
+.result-line {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 1px 8px 1px 24px;
+  line-height: 19px;
+  white-space: nowrap;
+}
+
+.result-line:hover {
+  background: var(--bg-hover);
+}
+
+.result-lineno {
+  flex: none;
+  min-width: 24px;
+  text-align: right;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.result-preview {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--fg);
+  font-family: Menlo, Monaco, "Droid Sans Mono", "Courier New", monospace;
+  font-size: 12px;
+}
+
+.result-preview mark {
+  background: color-mix(in srgb, #e3b341 55%, transparent);
+  color: inherit;
+  border-radius: 2px;
+}
+
 /* context menu */
 
 .ctx-backdrop {
@@ -390,6 +548,26 @@ button.primary:hover {
   box-shadow: inset 0 0 0 1px var(--focus);
 }
 
+/* inline rename input (context menu / F2) */
+.tree-item.tree-rename {
+  padding-right: 6px;
+}
+
+.tree-item.tree-rename input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 1px 4px;
+  border: 1px solid var(--focus);
+  border-radius: 2px;
+  background: var(--bg-input);
+  color: var(--fg);
+}
+
+.tree-item.tree-rename input:focus {
+  outline: none;
+}
+
 /* panes */
 
 .panes {
@@ -462,6 +640,11 @@ button.primary:hover {
   color: var(--fg-bright);
 }
 
+/* VS Code-style preview tab: italic until pinned (double-click / edit) */
+.tab.preview .tab-title {
+  font-style: italic;
+}
+
 .tab-close {
   padding: 1px 4px;
   font-size: 11px;
@@ -519,8 +702,45 @@ button.primary:hover {
   /* match vscode markdown preview typography */
   font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", system-ui, Ubuntu,
     "Droid Sans", sans-serif;
-  font-size: 14px;
+  font-size: var(--preview-font-size, 14px);
   line-height: 1.6;
+}
+
+/* Color the structural parts of the rendered markdown so sections read apart. */
+.content .markdown-body h1,
+.content .markdown-body h2 {
+  color: #4fc1ff;
+}
+
+.content .markdown-body h3,
+.content .markdown-body h4 {
+  color: #9cdcfe;
+}
+
+.content .markdown-body h5,
+.content .markdown-body h6 {
+  color: #c586c0;
+}
+
+.content .markdown-body a {
+  color: #4ec9b0;
+}
+
+.content .markdown-body strong {
+  color: #e5c07b;
+}
+
+.content .markdown-body blockquote {
+  color: #a7c99a;
+  border-left-color: #6a9955;
+}
+
+.content .markdown-body :not(pre) > code {
+  color: #ce9178;
+}
+
+.content .markdown-body table th {
+  color: #9cdcfe;
 }
 
 .content .markdown-body code,

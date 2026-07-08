@@ -1,4 +1,12 @@
-import { createDir, createFile, deletePath, movePath, readTextFile, writeTextFile } from "./api";
+import {
+  createDir,
+  createFile,
+  deletePath,
+  movePath,
+  readTextFile,
+  renamePath,
+  writeTextFile,
+} from "./api";
 import { basename, extname } from "./paths";
 import { addRecent } from "./prefs.svelte";
 import { createTerminal, disposeTerminal, setTermExitHandler } from "./terminals";
@@ -17,6 +25,12 @@ export interface Tab {
   fileVersion: number;
   termId?: number;
   editSplit?: number;
+  // a pending "jump to this match" from cross-file search; the editor consumes
+  // it (selects + scrolls) then clears it
+  reveal?: { line: number; col: number; length: number };
+  // VS Code-style preview tab: a single-click opens here (italic, reused for the
+  // next single-click); editing, double-click or double-click-in-tree pins it
+  preview?: boolean;
 }
 
 export interface Pane {
@@ -74,6 +88,8 @@ export const app = $state({
   treeVersion: 0,
   sidebarVisible: true,
   sidebarWidth: 240,
+  // which panel fills the sidebar: the file explorer or cross-file search
+  sidebarView: "files" as "files" | "search",
 });
 
 export function allRoots(): string[] {
@@ -159,7 +175,14 @@ export function activePane(): Pane {
   return panes.find((p) => p.id === app.activePaneId) ?? panes[0];
 }
 
-export async function openFile(path: string, paneId?: number) {
+// Mark a tab as permanent (no longer a VS Code-style preview).
+export function pinTab(tab: Tab) {
+  if (tab.preview) tab.preview = false;
+}
+
+// `preview` (single-click in the tree) opens into the reusable preview slot;
+// `preview: false` (double-click, or the editor) opens a permanent tab.
+export async function openFile(path: string, paneId?: number, preview = false) {
   const kind = fileKind(path);
   if (!kind) return;
   const pane =
@@ -168,6 +191,7 @@ export async function openFile(path: string, paneId?: number) {
   const existing = pane.tabs.find((t) => t.path === path);
   if (existing) {
     pane.activeTabId = existing.id;
+    if (!preview) pinTab(existing);
     return;
   }
   let content = "";
@@ -188,9 +212,35 @@ export async function openFile(path: string, paneId?: number) {
     content,
     savedContent: content,
     fileVersion: 0,
+    preview,
   };
+  // A single-click preview replaces the pane's existing preview tab in place,
+  // rather than piling up tabs, exactly like VS Code.
+  if (preview) {
+    const slot = pane.tabs.find((t) => t.preview);
+    if (slot) {
+      const i = pane.tabs.indexOf(slot);
+      pane.tabs[i] = tab;
+      pane.activeTabId = tab.id;
+      return;
+    }
+  }
   pane.tabs.push(tab);
   pane.activeTabId = tab.id;
+}
+
+// Open a file from a cross-file search hit and jump to the match. Markdown/html
+// flip into edit mode so the CodeMirror editor (which does the reveal) is shown.
+export async function openFileAt(
+  path: string,
+  sel: { line: number; col: number; length: number },
+) {
+  await openFile(path);
+  const pane = activePane();
+  const tab = pane.tabs.find((t) => t.path === path);
+  if (!tab) return;
+  if (tab.kind === "markdown" || tab.kind === "html") tab.editing = true;
+  tab.reveal = { ...sel };
 }
 
 // Re-read the file from disk (another process may have changed it). Text tabs
@@ -218,13 +268,34 @@ export function tabsUnderRoots(roots: string[]): Tab[] {
     .filter((t) => t.path && roots.some((r) => t.path === r || t.path.startsWith(r + "/")));
 }
 
+// Recently closed file tabs, most-recent last, for Ctrl+Shift+T.
+const closedTabs: { path: string; paneId: number }[] = [];
+const MAX_CLOSED = 20;
+
 export function closeTab(pane: Pane, tabId: number) {
   const i = pane.tabs.findIndex((t) => t.id === tabId);
   if (i < 0) return;
   const [closed] = pane.tabs.splice(i, 1);
   if (closed.termId !== undefined) disposeTerminal(closed.termId);
+  // Remember file tabs so Ctrl+Shift+T can bring them back (skip terminals).
+  if (closed.path) {
+    closedTabs.push({ path: closed.path, paneId: pane.id });
+    if (closedTabs.length > MAX_CLOSED) closedTabs.shift();
+  }
   if (pane.activeTabId === tabId) {
     pane.activeTabId = pane.tabs[Math.min(i, pane.tabs.length - 1)]?.id ?? null;
+  }
+}
+
+// Reopen the most recently closed file tab (Ctrl+Shift+T). Skips entries whose
+// file is already open again or was since deleted.
+export async function reopenClosedTab() {
+  while (closedTabs.length > 0) {
+    const { path, paneId } = closedTabs.pop()!;
+    const pane = allPanes().find((p) => p.id === paneId) ?? activePane();
+    if (pane.tabs.some((t) => t.path === path)) continue;
+    await openFile(path, pane.id);
+    if (activePane().tabs.some((t) => t.path === path)) return;
   }
 }
 
@@ -353,6 +424,27 @@ export async function moveEntry(src: string, destDir: string): Promise<string> {
           tab.path = dest;
         } else if (tab.path.startsWith(src + "/")) {
           tab.path = dest + tab.path.slice(src.length);
+        }
+      }
+    }
+  }
+  app.treeVersion++;
+  return dest;
+}
+
+// Rename a file/folder in place (context menu / F2). Rewrites the path — and,
+// for the renamed item itself, the title — of every affected open tab.
+export async function renameEntry(path: string, newName: string): Promise<string> {
+  const dest = await renamePath(path, newName);
+  if (dest !== path) {
+    for (const pane of allPanes()) {
+      for (const tab of pane.tabs) {
+        if (!tab.path) continue;
+        if (tab.path === path) {
+          tab.path = dest;
+          tab.title = basename(dest);
+        } else if (tab.path.startsWith(path + "/")) {
+          tab.path = dest + tab.path.slice(path.length);
         }
       }
     }
